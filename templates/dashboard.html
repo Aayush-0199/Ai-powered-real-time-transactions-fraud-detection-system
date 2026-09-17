@@ -1122,7 +1122,7 @@
             document.getElementById('avg-risk').textContent = Number(stats.avg_risk).toFixed(3);
             document.getElementById('alerts-count').textContent = stats.flagged;
 
-            const frozenCount = stats.frozen || 0;
+            const frozenCount = stats.frozen_count !== undefined ? stats.frozen_count : (stats.frozen || 0);
             const frozenBadge = document.getElementById('frozen-count-badge');
             const sidebarFrozen = document.getElementById('sidebar-frozen-count');
             const frozenSub = document.getElementById('frozen-sub-count');
