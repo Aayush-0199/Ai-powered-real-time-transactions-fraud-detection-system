@@ -419,14 +419,20 @@ def get_frozen_accounts():
 
 @app.route('/api/reports/sar', methods=['POST'])
 def generate_sar_report():
-    data = request.json
+    data = request.json or {}
     report_path = f"reports/sar_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    report_generator.generate_sar(
-        data['transactions'],
-        data['customer_info'],
-        report_path
-    )
-    return send_file(report_path, as_attachment=True)
+    os.makedirs("reports", exist_ok=True)
+    try:
+        from reporting.generator import ReportGenerator
+        rg = ReportGenerator(template_dir="reporting/templates")
+        rg.generate_sar(
+            data.get('transactions', []),
+            data.get('customer_info', {}),
+            report_path
+        )
+        return send_file(report_path, as_attachment=True)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Report generation failed: {str(e)}"}), 500
 
 @app.route('/api/customer/<customer_id>/profile')
 def get_customer_profile(customer_id):
