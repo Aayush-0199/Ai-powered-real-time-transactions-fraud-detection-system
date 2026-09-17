@@ -38,6 +38,10 @@ _store_lock = threading.Lock()
 live_transactions = deque(maxlen=500)
 _txn_counter = 0  # global sequential ID
 
+# ── Frozen Accounts Store ──────────────────────────────────────────────────
+_frozen_lock = threading.Lock()
+frozen_accounts = {}  # account_id -> { 'account_id': ..., 'frozen_at': ..., 'reason': ... }
+
 # Feature names
 features = ['TransactionAmount', 'TransactionDuration', 'LoginAttempts', 
             'AccountBalance', 'DaysSinceLastTransaction', 'TransactionSpeed',
@@ -80,10 +84,54 @@ def dashboard():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_transaction():
+    global _txn_counter
     data = request.json
+    account_id = data.get('AccountID', 'UNKNOWN')
+
+    # Intercept transactions for frozen accounts immediately
+    with _frozen_lock:
+        is_account_frozen = account_id in frozen_accounts
+
+    if is_account_frozen:
+        with _store_lock:
+            _txn_counter += 1
+            live_transactions.append({
+                'id': _txn_counter,
+                'TransactionID': f'SIM{_txn_counter:06d}',
+                'AccountID': account_id,
+                'TransactionAmount': float(data.get('TransactionAmount', 0)),
+                'TransactionType': data.get('TransactionType', 'Debit'),
+                'Location': data.get('Location', 'Unknown'),
+                'Channel': data.get('Channel', 'Online'),
+                'DeviceID': data.get('DeviceID', 'Unknown'),
+                'MerchantID': data.get('MerchantID', 'Unknown'),
+                'RiskScore': 1.0,
+                'XGBProb': 1.0,
+                'IsoScore': 1.0,
+                'GNNProb': 1.0,
+                'IsFraud': True,
+                'IsFrozen': True,
+                'Status': 'BLOCKED',
+                'TopFeature': 'ACCOUNT_FROZEN',
+                'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            })
+        return jsonify({
+            'isolation_forest_score': 1.0,
+            'xgboost_probability': 1.0,
+            'gnn_probability': 1.0,
+            'composite_score': 1.0,
+            'fraud_probability': 1.0,
+            'is_fraud': True,
+            'is_frozen': True,
+            'status': 'BLOCKED',
+            'risk_score': 1.0,
+            'customer_risk_score': 1.0,
+            'explanation': [{'feature': 'ACCOUNT_FROZEN', 'value': 1.0, 'shap_value': 1.0}],
+            'drift_detected': False
+        })
     
     # Update customer profile
-    profiler.update_profile(data['AccountID'], {
+    profiler.update_profile(account_id, {
         'amount': float(data['TransactionAmount']),
         'type': data['TransactionType'],
         'date': data['TransactionDate']
@@ -209,13 +257,12 @@ def analyze_transaction():
     }
 
     # ── Save to live store ──────────────────────────────────────────────────
-    global _txn_counter
     with _store_lock:
         _txn_counter += 1
         live_transactions.append({
             'id': _txn_counter,
             'TransactionID': f'SIM{_txn_counter:06d}',
-            'AccountID': data.get('AccountID', 'UNKNOWN'),
+            'AccountID': account_id,
             'TransactionAmount': float(data.get('TransactionAmount', 0)),
             'TransactionType': data.get('TransactionType', 'Debit'),
             'Location': data.get('Location', 'Unknown'),
@@ -226,8 +273,9 @@ def analyze_transaction():
             'XGBProb': float(xgb_prob),
             'IsoScore': float(iso_score),
             'GNNProb': float(gnn_prob),
-            'IsFraud': bool(composite_score > 0.5),
-            'Status': 'Flagged' if composite_score > 0.5 else 'Cleared',
+            'IsFraud': is_fraud_decision,
+            'IsFrozen': False,
+            'Status': 'Flagged' if is_fraud_decision else 'Cleared',
             'TopFeature': explanation[0]['feature'] if explanation else 'N/A',
             'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         })
@@ -275,11 +323,14 @@ def get_stats():
     """Return aggregate counters for the dashboard KPI cards."""
     with _store_lock:
         txns = list(live_transactions)
+    with _frozen_lock:
+        frozen_cnt = len(frozen_accounts)
     total = len(txns)
     if total == 0:
         return jsonify({
             'total': 0, 'flagged': 0, 'high_risk': 0,
-            'avg_risk': 0.0, 'fraud_rate': 0.0
+            'avg_risk': 0.0, 'fraud_rate': 0.0,
+            'frozen': frozen_cnt
         })
     flagged   = sum(1 for t in txns if t['IsFraud'])
     high_risk = sum(1 for t in txns if t['RiskScore'] > 0.7)
@@ -290,7 +341,68 @@ def get_stats():
         'high_risk':  high_risk,
         'avg_risk':   avg_risk,
         'fraud_rate': round(flagged / total * 100, 1),
+        'frozen':     frozen_cnt
     })
+
+# ── Incident Response: Account Freeze & Block Endpoints ─────────────────────
+@app.route('/api/account/<account_id>/freeze', methods=['POST'])
+def freeze_account(account_id):
+    """Freeze an account to immediately intercept and block all future transactions."""
+    reason = (request.json or {}).get('reason', 'High-Risk Fraud Incident Detected')
+    with _frozen_lock:
+        frozen_accounts[account_id] = {
+            'account_id': account_id,
+            'frozen_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'reason': reason
+        }
+        count = len(frozen_accounts)
+
+    # Update existing transactions in memory buffer
+    with _store_lock:
+        for t in live_transactions:
+            if t.get('AccountID') == account_id:
+                t['IsFrozen'] = True
+                t['Status'] = 'BLOCKED'
+
+    return jsonify({
+        'success': True,
+        'account_id': account_id,
+        'status': 'FROZEN',
+        'frozen_count': count,
+        'message': f'Account {account_id} has been FROZEN. All incoming transactions will be blocked.'
+    })
+
+@app.route('/api/account/<account_id>/unfreeze', methods=['POST'])
+def unfreeze_account(account_id):
+    """Unfreeze an account to restore normal transaction processing."""
+    with _frozen_lock:
+        frozen_accounts.pop(account_id, None)
+        count = len(frozen_accounts)
+
+    with _store_lock:
+        for t in live_transactions:
+            if t.get('AccountID') == account_id:
+                t['IsFrozen'] = False
+                t['Status'] = 'Flagged' if t.get('IsFraud') else 'Cleared'
+
+    return jsonify({
+        'success': True,
+        'account_id': account_id,
+        'status': 'ACTIVE',
+        'frozen_count': count,
+        'message': f'Account {account_id} has been UNFREEZED and restored to active status.'
+    })
+
+@app.route('/api/frozen-accounts')
+def get_frozen_accounts():
+    """List all currently frozen accounts."""
+    with _frozen_lock:
+        accounts = list(frozen_accounts.values())
+    return jsonify({
+        'count': len(accounts),
+        'accounts': accounts
+    })
+
 
 @app.route('/api/reports/sar', methods=['POST'])
 def generate_sar_report():
