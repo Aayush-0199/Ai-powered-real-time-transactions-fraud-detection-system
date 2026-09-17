@@ -1,6 +1,6 @@
-# 🧠 AI-Powered Transaction Fraud Detection System
+# 🧠 Smart Transaction Fraud Detection System
 
-A real-time intelligent fraud detection system that leverages machine learning, anomaly detection, SHAP explainability, and graph neural networks to identify and explain fraudulent financial transactions in banking and fintech environments.
+An advanced, real-time fraud detection platform utilizing machine learning, anomaly detection, SHAP explainability, and graph neural networks to pinpoint and clarify fraudulent financial activities within banking and fintech sectors.
 
 ---
 
