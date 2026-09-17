@@ -16,6 +16,7 @@ class CustomerRiskProfiler:
         if customer_id not in self.profiles:
             self.profiles[customer_id] = {
                 "first_seen": datetime.now().isoformat(),
+             
                 "last_activity": datetime.now().isoformat(),
                 "transaction_count": 0,
                 "total_amount": 0,
@@ -41,6 +42,7 @@ class CustomerRiskProfiler:
         profile['risk_score'] = min(0.9, 0.3 + amount_deviation * 0.4 + freq_deviation * 0.3)
         
         self._save_profiles()
+
     
     def _calculate_amount_deviation(self, customer_id, amount):
         """Calculate deviation from customer's typical transaction amount"""
@@ -54,8 +56,16 @@ class CustomerRiskProfiler:
         return 0.5  # Placeholder
     
     def _save_profiles(self):
+
         with open(self.storage_path, 'w') as f:
             json.dump(self.profiles, f)
     
     def get_risk_profile(self, customer_id):
         return self.profiles.get(customer_id, None)
+
+
+
+
+
+
+        
