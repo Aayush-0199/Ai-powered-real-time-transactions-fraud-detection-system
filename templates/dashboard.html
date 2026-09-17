@@ -12,6 +12,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Vis Network for Entity Graph -->
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+    <!-- Chart.js for Distribution & Velocity -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <style>
         :root {
@@ -485,6 +487,22 @@
             align-items: start;
         }
 
+        /* ── LOCKED CHART CONTAINERS (PHYSICALLY IMMUNE TO DOWNWARD EXPANSION) ── */
+        .chart-container-locked {
+            position: relative;
+            height: 220px;
+            max-height: 220px;
+            min-height: 220px;
+            width: 100%;
+            overflow: hidden;
+        }
+        .chart-container-locked canvas {
+            max-height: 220px !important;
+            height: 220px !important;
+            display: block;
+            width: 100% !important;
+        }
+
         /* ── VIS-NETWORK GRAPH ── */
         #network-graph {
             width: 100%;
@@ -602,6 +620,7 @@
             <div>
                 <div class="nav-section-label">AI & Graph Engines</div>
                 <ul class="side-nav">
+                    <li><a href="#velocity-section"><i class="bi bi-activity text-info"></i> Risk & Velocity</a></li>
                     <li><a href="#network-section"><i class="bi bi-diagram-3 text-primary"></i> Graph Topology</a></li>
                     <li><a href="#evaluation-section"><i class="bi bi-cpu text-warning"></i> Threat Evaluator</a></li>
                 </ul>
@@ -766,7 +785,44 @@
                 </div>
             </section>
 
-            <!-- SECTION 2: Graph Network (Left) & Manual Threat Evaluator (Right) -->
+            <!-- SECTION 2: RISK DISTRIBUTION & RISK VELOCITY (Strictly Fixed Bounds, Zero Drift) -->
+            <section class="workspace-grid-half" id="velocity-section">
+                <!-- Risk Distribution Donut Chart -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="mb-0"><i class="bi bi-pie-chart text-info"></i> Risk Distribution</h3>
+                            <div class="small text-muted" style="font-size:0.75rem; margin-top:2px;">Composite score breakdown</div>
+                        </div>
+                        <span class="badge-pill badge-safe" id="donut-fraud-rate">0.0% FRAUD RATE</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="chart-container-locked">
+                            <canvas id="donut-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Velocity (60s) Line Chart -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="mb-0"><i class="bi bi-activity text-danger"></i> Risk Velocity (60s)</h3>
+                            <div class="small text-muted" style="font-size:0.75rem; margin-top:2px;">Avg risk score over time</div>
+                        </div>
+                        <span class="badge-pill badge-danger" id="vel-status-badge">
+                            <span class="pulse-dot dot-green"></span> STREAM ACTIVE
+                        </span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="chart-container-locked">
+                            <canvas id="line-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Graph Network (Left) & Manual Threat Evaluator (Right) -->
             <section class="workspace-grid-half" id="network-section">
                 <!-- Vis-Network Graph Visualizer -->
                 <div class="panel-card">
@@ -919,6 +975,153 @@
         // Dedicated Threat Feed Storage
         const threatAlertsFeed = [];
         const seenThreatTxnIds = new Set();
+
+        // ── Charts Management ────────────────────────────────────────────────
+        let donutChart = null;
+        let lineChart = null;
+        const velocityHistory = [];
+        const MAX_VELOCITY = 30;
+
+        function initCharts() {
+            const donutEl = document.getElementById('donut-chart');
+            if (donutEl) {
+                const donutCtx = donutEl.getContext('2d');
+                donutChart = new Chart(donutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Cleared / Low Risk', 'Medium Risk', 'High Risk', 'Blocked'],
+                        datasets: [{
+                            data: [1, 0, 0, 0],
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                            borderWidth: 2,
+                            borderColor: '#151d30',
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
+                                    boxWidth: 10,
+                                    padding: 12
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const lineEl = document.getElementById('line-chart');
+            if (lineEl) {
+                const lineCtx = lineEl.getContext('2d');
+                lineChart = new Chart(lineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            {
+                                label: 'Avg Risk Score',
+                                data: [],
+                                borderColor: '#6366f1',
+                                backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                borderWidth: 2.2,
+                                pointRadius: 2,
+                                tension: 0.35,
+                                fill: true
+                            },
+                            {
+                                label: 'Threshold (0.50)',
+                                data: [],
+                                borderColor: '#ef4444',
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                pointRadius: 0,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        scales: {
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                                ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 7 }
+                            },
+                            y: {
+                                min: 0.0,
+                                max: 1.0,
+                                grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                                ticks: { color: '#64748b', font: { size: 10 } }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" },
+                                    boxWidth: 8,
+                                    padding: 8
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateCharts(stats) {
+            if (donutChart) {
+                const total = stats.total || 0;
+                const flagged = stats.flagged || 0;
+                const high = stats.high_risk || 0;
+                const blocked = stats.blocked || 0;
+                const med = Math.max(0, flagged - high - blocked);
+                const low = Math.max(0, total - flagged);
+
+                donutChart.data.datasets[0].data = [low, med, high, blocked];
+                donutChart.update('none');
+
+                const rateBadge = document.getElementById('donut-fraud-rate');
+                if (rateBadge) rateBadge.textContent = `${stats.fraud_rate || 0}% FRAUD RATE`;
+            }
+
+            if (lineChart) {
+                const now = new Date().toLocaleTimeString();
+                const curRisk = Math.max(0, Math.min(1.0, parseFloat(stats.avg_risk) || 0.0));
+                velocityHistory.push({ t: now, v: curRisk });
+                if (velocityHistory.length > MAX_VELOCITY) velocityHistory.shift();
+
+                lineChart.data.labels = velocityHistory.map(d => d.t);
+                lineChart.data.datasets[0].data = velocityHistory.map(d => d.v);
+                lineChart.data.datasets[1].data = velocityHistory.map(() => 0.50);
+                lineChart.update('none');
+
+                const statusBadge = document.getElementById('vel-status-badge');
+                if (statusBadge) {
+                    if (curRisk > 0.65) {
+                        statusBadge.className = 'badge-pill badge-danger';
+                        statusBadge.innerHTML = '<span class="pulse-dot dot-red"></span> SPIKE ALERT';
+                    } else if (curRisk > 0.40) {
+                        statusBadge.className = 'badge-pill badge-medium';
+                        statusBadge.innerHTML = '<span class="pulse-dot dot-yellow"></span> ELEVATED';
+                    } else {
+                        statusBadge.className = 'badge-pill badge-safe';
+                        statusBadge.innerHTML = '<span class="pulse-dot dot-green"></span> STREAM NORMAL';
+                    }
+                }
+            }
+        }
 
         // ── Audio Alert System (Web Audio API) ────────────────────────────────
         let audioCtx = null;
@@ -1078,6 +1281,7 @@
 
                 updateKPICards(stats);
                 populateTransactionsTable(txns);
+                updateCharts(stats);
                 isInitialLoad = false;
             } catch (e) {
                 console.warn('Poll error:', e);
@@ -1514,6 +1718,7 @@
 
         // ── Initialization ────────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
             initNetworkGraph();
             setupEventListeners();
             fetchAndRender();

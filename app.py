@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Initialize components
 iso_forest = joblib.load('trained_models/isolation_forest.pkl')
@@ -329,7 +330,7 @@ def get_stats():
     if total == 0:
         return jsonify({
             'total': 0, 'flagged': 0, 'high_risk': 0,
-            'avg_risk': 0.0, 'fraud_rate': 0.0,
+            'blocked': 0, 'avg_risk': 0.0, 'fraud_rate': 0.0,
             'frozen': frozen_cnt
         })
     flagged   = sum(1 for t in txns if t['IsFraud'])
@@ -339,6 +340,7 @@ def get_stats():
         'total':      total,
         'flagged':    flagged,
         'high_risk':  high_risk,
+        'blocked':    frozen_cnt,
         'avg_risk':   avg_risk,
         'fraud_rate': round(flagged / total * 100, 1),
         'frozen':     frozen_cnt
