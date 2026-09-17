@@ -4,13 +4,11 @@ import joblib
 import numpy as np
 from datetime import datetime
 import torch
-import mlflow
 import threading
 from collections import deque
 import time
 from graph_models.gnn_model import load_gnn_model
 from graph_models.data_loader import TransactionGraphBuilder
-from reporting.generator import ReportGenerator
 from profiling.builder import CustomerRiskProfiler
 from drift.detector import ConceptDriftDetector
 from models.automl.trainer import AutoMLTrainer
@@ -29,7 +27,6 @@ xgb = joblib.load('trained_models/xgboost.pkl')
 shap_explainer = joblib.load('trained_models/shap_explainer.pkl')
 gnn_model = load_gnn_model('models/gnn_model.pt')
 graph_builder = TransactionGraphBuilder()
-report_generator = ReportGenerator()
 profiler = CustomerRiskProfiler()
 drift_detector = ConceptDriftDetector()
 
@@ -460,11 +457,5 @@ def get_drift_status():
 
 if __name__ == '__main__':
     # Create required directories
-    import os
-    os.makedirs("reports", exist_ok=True)
     os.makedirs("data", exist_ok=True)
-    
-    # Initialize MLflow
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "file:./mlruns"))
-    
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=5000)
