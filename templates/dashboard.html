@@ -441,12 +441,7 @@
             50% { opacity: 0.7; }
         }
 
-        @keyframes rowFlash {
-            0%   { background-color: rgba(99, 102, 241, 0.35); }
-            100% { background-color: transparent; }
-        }
-
-        /* ── DEDICATED IN-PAGE THREAT ALERTS SECTION (No More Floating Popups) ── */
+        /* ── DEDICATED IN-PAGE THREAT ALERTS SECTION (No Floating Popups) ── */
         .alerts-feed-container {
             height: 480px;
             max-height: 480px;
@@ -481,7 +476,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── SECTION 2 & 3: GRIDS (Strict 2-Column Desktop Grid) ── */
+        /* ── SECTION 2: GRAPH & EVALUATION (Strict 2-Column Grid) ── */
         .workspace-grid-half {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -490,148 +485,12 @@
             align-items: start;
         }
 
-        /* ── BRAND NEW: RISK DISTRIBUTION COMPONENT (Pure Vector SVG) ── */
-        .risk-dist-wrapper {
-            display: grid;
-            grid-template-columns: 160px minmax(0, 1fr);
-            gap: 20px;
-            align-items: center;
-            height: 200px;
-            min-width: 0;
-        }
-        .donut-svg-box {
-            position: relative;
-            width: 150px;
-            height: 150px;
-            margin: 0 auto;
-        }
-        .donut-svg {
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-        }
-        .donut-center-info {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            pointer-events: none;
-        }
-        .donut-center-val {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #fff;
-            font-family: var(--font-mono);
-            line-height: 1;
-        }
-        .donut-center-lbl {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            margin-top: 3px;
-        }
-
-        .risk-dist-legend {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            min-width: 0;
-        }
-        .dist-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .dist-item-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.78rem;
-        }
-        .dist-label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-        .dist-counts {
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            color: #fff;
-        }
-        .dist-bar-track {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .dist-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.5s ease;
-        }
-        .fill-safe { background: var(--risk-safe); }
-        .fill-warning { background: var(--risk-warning); }
-        .fill-danger { background: var(--risk-danger); }
-
-        /* ── BRAND NEW: RISK VELOCITY COMPONENT (Pure Vector SVG Monitor) ── */
-        .velocity-hud {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            padding: 8px 14px;
-            margin-bottom: 12px;
-        }
-        .velocity-hud-stat {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .velocity-hud-label {
-            font-size: 0.68rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .velocity-hud-val {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #fff;
-            font-family: var(--font-mono);
-        }
-
-        .velocity-svg-box {
-            position: relative;
-            width: 100%;
-            height: 130px;
-            min-height: 130px;
-            max-height: 130px;
-            background: #0d121f;
-            border-radius: 8px;
-            border: 1px solid var(--border-subtle);
-            overflow: hidden;
-        }
-        .velocity-svg {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
         /* ── VIS-NETWORK GRAPH ── */
         #network-graph {
             width: 100%;
-            height: 260px;
-            min-height: 260px;
-            max-height: 260px;
+            height: 380px;
+            min-height: 380px;
+            max-height: 380px;
             border-radius: 8px;
             background: #0d121f;
             border: 1px solid var(--border-subtle);
@@ -743,7 +602,6 @@
             <div>
                 <div class="nav-section-label">AI & Graph Engines</div>
                 <ul class="side-nav">
-                    <li><a href="#velocity-section"><i class="bi bi-activity text-info"></i> Risk Velocity</a></li>
                     <li><a href="#network-section"><i class="bi bi-diagram-3 text-primary"></i> Graph Topology</a></li>
                     <li><a href="#evaluation-section"><i class="bi bi-cpu text-warning"></i> Threat Evaluator</a></li>
                 </ul>
@@ -784,7 +642,7 @@
             <header class="top-header">
                 <div class="header-title">
                     <h2>Live Fraud Intelligence Dashboard</h2>
-                    <p>Real-time cognitive transaction monitoring, zero-latency vector velocity, and incident response</p>
+                    <p>Real-time cognitive transaction monitoring, multi-model scoring, and incident response</p>
                 </div>
                 <div class="header-actions">
                     <button id="soundToggleBtn" class="btn-modern" onclick="toggleSoundAlerts()" title="Toggle audible fraud chime">
@@ -846,7 +704,7 @@
                 </div>
             </section>
 
-            <!-- SECTION 1: Table (Left) & DEDICATED Threat Alerts Feed (Right) -->
+            <!-- SECTION 1: Transactions Table (Left) & Dedicated Threat Feed (Right) -->
             <section class="workspace-grid-split" id="transactions-section">
                 <!-- Left: Recent Transactions Table -->
                 <div class="panel-card">
@@ -882,7 +740,7 @@
                     </div>
                 </div>
 
-                <!-- Right: DEDICATED Risk Notifications & Threat Feed (Replaces Popups) -->
+                <!-- Right: Dedicated In-Page Risk Notifications & Threat Feed (No Popups) -->
                 <div class="panel-card" id="alerts-section">
                     <div class="panel-header">
                         <h3>
@@ -898,7 +756,6 @@
                     </div>
                     <div class="panel-body">
                         <div class="alerts-feed-container" id="alerts-feed-list">
-                            <!-- Populated dynamically via JS. If empty, shows all-clear card -->
                             <div class="text-center py-5 text-muted" id="alerts-empty-state">
                                 <i class="bi bi-shield-check text-success fs-1 mb-2 d-block"></i>
                                 <div class="fw-bold text-light">No Active Threat Alerts</div>
@@ -909,138 +766,7 @@
                 </div>
             </section>
 
-            <!-- SECTION 2: BRAND NEW RISK DISTRIBUTION & RISK VELOCITY (Zero-Reflow Pure Vector) -->
-            <section class="workspace-grid-half" id="velocity-section">
-                <!-- Left: Completely Rebuilt Risk Distribution SVG Component -->
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <h3><i class="bi bi-pie-chart text-info"></i> Risk Score Distribution</h3>
-                        <span class="badge-pill badge-safe" id="fraud-rate-badge">0.0% FRAUD RATE</span>
-                    </div>
-                    <div class="panel-body">
-                        <div class="risk-dist-wrapper">
-                            <!-- SVG Donut Chart -->
-                            <div class="donut-svg-box">
-                                <svg class="donut-svg" viewBox="0 0 160 160">
-                                    <!-- Background Base Ring -->
-                                    <circle cx="80" cy="80" r="60" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"></circle>
-                                    <!-- Low Risk Arc (Green) -->
-                                    <circle id="donut-arc-low" cx="80" cy="80" r="60" fill="none" stroke="#10b981" stroke-width="14"
-                                            stroke-dasharray="377" stroke-dashoffset="0" stroke-linecap="round"
-                                            style="transition: stroke-dashoffset 0.6s ease, stroke-dasharray 0.6s ease;"></circle>
-                                    <!-- Medium Risk Arc (Yellow) -->
-                                    <circle id="donut-arc-med" cx="80" cy="80" r="60" fill="none" stroke="#f59e0b" stroke-width="14"
-                                            stroke-dasharray="377" stroke-dashoffset="377" stroke-linecap="round"
-                                            style="transition: stroke-dashoffset 0.6s ease, stroke-dasharray 0.6s ease;"></circle>
-                                    <!-- High Risk Arc (Red) -->
-                                    <circle id="donut-arc-high" cx="80" cy="80" r="60" fill="none" stroke="#ef4444" stroke-width="14"
-                                            stroke-dasharray="377" stroke-dashoffset="377" stroke-linecap="round"
-                                            style="transition: stroke-dashoffset 0.6s ease, stroke-dasharray 0.6s ease;"></circle>
-                                </svg>
-                                <div class="donut-center-info">
-                                    <div class="donut-center-val" id="donut-total-count">0</div>
-                                    <div class="donut-center-lbl">AUDITED</div>
-                                </div>
-                            </div>
-
-                            <!-- Distribution Metric Breakdown Bars -->
-                            <div class="risk-dist-legend">
-                                <div class="dist-item">
-                                    <div class="dist-item-header">
-                                        <span class="dist-label"><span class="pulse-dot dot-green"></span> Low Risk (&lt; 0.40)</span>
-                                        <span class="dist-counts" id="dist-count-low">0 (0%)</span>
-                                    </div>
-                                    <div class="dist-bar-track">
-                                        <div class="dist-bar-fill fill-safe" id="dist-bar-low" style="width: 100%;"></div>
-                                    </div>
-                                </div>
-
-                                <div class="dist-item">
-                                    <div class="dist-item-header">
-                                        <span class="dist-label"><span class="pulse-dot dot-yellow"></span> Medium Risk (0.40 - 0.70)</span>
-                                        <span class="dist-counts" id="dist-count-med">0 (0%)</span>
-                                    </div>
-                                    <div class="dist-bar-track">
-                                        <div class="dist-bar-fill fill-warning" id="dist-bar-med" style="width: 0%;"></div>
-                                    </div>
-                                </div>
-
-                                <div class="dist-item">
-                                    <div class="dist-item-header">
-                                        <span class="dist-label"><span class="pulse-dot dot-red"></span> High Risk (&gt; 0.70)</span>
-                                        <span class="dist-counts" id="dist-count-high">0 (0%)</span>
-                                    </div>
-                                    <div class="dist-bar-track">
-                                        <div class="dist-bar-fill fill-danger" id="dist-bar-high" style="width: 0%;"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right: Completely Rebuilt Real-Time Risk Velocity SVG Component -->
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <h3><i class="bi bi-activity text-danger"></i> Real-Time Risk Velocity</h3>
-                        <span class="badge-pill badge-danger" id="velocity-status-badge">
-                            <span class="pulse-dot dot-green"></span> STREAM ACTIVE
-                        </span>
-                    </div>
-                    <div class="panel-body">
-                        <!-- Velocity Telemetry HUD -->
-                        <div class="velocity-hud">
-                            <div class="velocity-hud-stat">
-                                <span class="velocity-hud-label">Current Velocity</span>
-                                <span class="velocity-hud-val" id="vel-current-risk">0.000</span>
-                            </div>
-                            <div class="velocity-hud-stat">
-                                <span class="velocity-hud-label">Peak Velocity (60s)</span>
-                                <span class="velocity-hud-val text-warning" id="vel-peak-risk">0.000</span>
-                            </div>
-                            <div class="velocity-hud-stat">
-                                <span class="velocity-hud-label">Stream Acceleration</span>
-                                <span class="velocity-hud-val text-cyan" id="vel-rate-val">Steady</span>
-                            </div>
-                            <div class="velocity-hud-stat">
-                                <span class="velocity-hud-label">Window Buffer</span>
-                                <span class="velocity-hud-val text-muted" id="vel-buffer-count">0/30 pts</span>
-                            </div>
-                        </div>
-
-                        <!-- Pure SVG Dynamic Waveform Monitor (Guaranteed zero height crawl) -->
-                        <div class="velocity-svg-box">
-                            <svg class="velocity-svg" id="velocitySvgCanvas" viewBox="0 0 500 130" preserveAspectRatio="none">
-                                <defs>
-                                    <linearGradient id="velocityGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stop-color="#6366f1" stop-opacity="0.45" />
-                                        <stop offset="100%" stop-color="#6366f1" stop-opacity="0.0" />
-                                    </linearGradient>
-                                </defs>
-
-                                <!-- Grid Guidelines -->
-                                <line x1="20" y1="20" x2="480" y2="20" stroke="rgba(239,68,68,0.2)" stroke-dasharray="3,3" stroke-width="1" />
-                                <text x="484" y="24" fill="#ef4444" font-size="9" font-family="'JetBrains Mono', monospace">1.0</text>
-
-                                <line x1="20" y1="55" x2="480" y2="55" stroke="rgba(245,158,11,0.2)" stroke-dasharray="3,3" stroke-width="1" />
-                                <text x="484" y="58" fill="#f59e0b" font-size="9" font-family="'JetBrains Mono', monospace">0.5</text>
-
-                                <line x1="20" y1="110" x2="480" y2="110" stroke="rgba(16,185,129,0.2)" stroke-width="1" />
-                                <text x="484" y="113" fill="#10b981" font-size="9" font-family="'JetBrains Mono', monospace">0.0</text>
-
-                                <!-- Wave Area & Path -->
-                                <path id="velocityAreaPath" fill="url(#velocityGrad)" d=""></path>
-                                <path id="velocityLinePath" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d=""></path>
-
-                                <!-- Glowing Head Point on Current Velocity -->
-                                <circle id="velocityHeadPoint" cx="-10" cy="-10" r="4.5" fill="#06b6d4" stroke="#ffffff" stroke-width="1.5"></circle>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECTION 3: Graph Network (Left) & Manual Threat Evaluator (Right) -->
+            <!-- SECTION 2: Graph Network (Left) & Manual Threat Evaluator (Right) -->
             <section class="workspace-grid-half" id="network-section">
                 <!-- Vis-Network Graph Visualizer -->
                 <div class="panel-card">
@@ -1190,13 +916,9 @@
         let soundAlertsEnabled = true;
         let currentDetailTxn = null;
 
-        // Dedicated Threat Feed & Risk Velocity Storage
-        const threatAlertsFeed = []; // In-page dedicated feed
+        // Dedicated Threat Feed Storage
+        const threatAlertsFeed = [];
         const seenThreatTxnIds = new Set();
-        const velocityHistory = [];  // Array of { risk: number, time: string }
-        const MAX_VELOCITY_POINTS = 30;
-        let peakVelocity60s = 0.0;
-        let lastVelocityTime = Date.now();
 
         // ── Audio Alert System (Web Audio API) ────────────────────────────────
         let audioCtx = null;
@@ -1215,7 +937,6 @@
             try {
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
-                // High-priority dual tone chime
                 const osc1 = ctx.createOscillator();
                 const osc2 = ctx.createOscillator();
                 const gain = ctx.createGain();
@@ -1261,14 +982,10 @@
             if (seenThreatTxnIds.has(t.id)) return;
             seenThreatTxnIds.add(t.id);
 
-            // Add to feed storage
             threatAlertsFeed.unshift(t);
             if (threatAlertsFeed.length > 40) threatAlertsFeed.pop();
 
-            // Play audio alert
             playAlertChime();
-
-            // Re-render feed
             renderThreatAlertsFeed();
         }
 
@@ -1348,157 +1065,6 @@
             }).join('');
         }
 
-        // ── BRAND NEW: RISK DISTRIBUTION COMPONENT (Pure SVG Vector Engine) ───
-        function updateRiskDistribution(stats) {
-            const total = stats.total || 0;
-            const flagged = stats.flagged || 0;
-            const high = stats.high_risk || 0;
-            const med = Math.max(0, flagged - high);
-            const low = Math.max(0, total - flagged);
-
-            // Update center text & badge
-            const centerTotal = document.getElementById('donut-total-count');
-            const fraudRateBadge = document.getElementById('fraud-rate-badge');
-            if (centerTotal) centerTotal.textContent = total;
-            if (fraudRateBadge) fraudRateBadge.textContent = `${stats.fraud_rate || 0}% FRAUD RATE`;
-
-            // Circumference of r=60 is 2 * PI * 60 ≈ 377
-            const C = 377;
-            const lowPct = total > 0 ? (low / total) : 1;
-            const medPct = total > 0 ? (med / total) : 0;
-            const highPct = total > 0 ? (high / total) : 0;
-
-            const arcLow = document.getElementById('donut-arc-low');
-            const arcMed = document.getElementById('donut-arc-med');
-            const arcHigh = document.getElementById('donut-arc-high');
-
-            if (arcLow && arcMed && arcHigh) {
-                // Stroke-dasharray and offsets for continuous segmented donut
-                const lowLen = lowPct * C;
-                const medLen = medPct * C;
-                const highLen = highPct * C;
-
-                arcLow.style.strokeDasharray = `${lowLen} ${C}`;
-                arcLow.style.strokeDashoffset = '0';
-
-                arcMed.style.strokeDasharray = `${medLen} ${C}`;
-                arcMed.style.strokeDashoffset = `${-lowLen}`;
-
-                arcHigh.style.strokeDasharray = `${highLen} ${C}`;
-                arcHigh.style.strokeDashoffset = `${-(lowLen + medLen)}`;
-            }
-
-            // Update breakdown text and progress bars
-            const countLow = document.getElementById('dist-count-low');
-            const countMed = document.getElementById('dist-count-med');
-            const countHigh = document.getElementById('dist-count-high');
-            const barLow = document.getElementById('dist-bar-low');
-            const barMed = document.getElementById('dist-bar-med');
-            const barHigh = document.getElementById('dist-bar-high');
-
-            if (countLow) countLow.textContent = `${low} (${(lowPct * 100).toFixed(1)}%)`;
-            if (countMed) countMed.textContent = `${med} (${(medPct * 100).toFixed(1)}%)`;
-            if (countHigh) countHigh.textContent = `${high} (${(highPct * 100).toFixed(1)}%)`;
-
-            if (barLow) barLow.style.width = `${lowPct * 100}%`;
-            if (barMed) barMed.style.width = `${medPct * 100}%`;
-            if (barHigh) barHigh.style.width = `${highPct * 100}%`;
-        }
-
-        // ── BRAND NEW: REAL-TIME RISK VELOCITY (Pure SVG Waveform Engine) ─────
-        function updateRiskVelocity(avgRisk, latestTxns) {
-            const risk = Math.max(0, Math.min(1.0, parseFloat(avgRisk) || 0.0));
-            const nowTime = new Date().toLocaleTimeString();
-
-            // Append to rolling sliding window buffer
-            velocityHistory.push({ risk, time: nowTime });
-            if (velocityHistory.length > MAX_VELOCITY_POINTS) {
-                velocityHistory.shift();
-            }
-
-            // Calculate peak in the active window
-            peakVelocity60s = Math.max(...velocityHistory.map(p => p.risk), risk);
-
-            // Update Telemetry HUD
-            const curRiskElem = document.getElementById('vel-current-risk');
-            const peakRiskElem = document.getElementById('vel-peak-risk');
-            const rateValElem = document.getElementById('vel-rate-val');
-            const bufferElem = document.getElementById('vel-buffer-count');
-            const statusBadge = document.getElementById('velocity-status-badge');
-
-            if (curRiskElem) curRiskElem.textContent = risk.toFixed(3);
-            if (peakRiskElem) peakRiskElem.textContent = peakVelocity60s.toFixed(3);
-            if (bufferElem) bufferElem.textContent = `${velocityHistory.length}/${MAX_VELOCITY_POINTS} pts`;
-
-            // Calculate risk acceleration / trend
-            if (velocityHistory.length >= 2) {
-                const prev = velocityHistory[velocityHistory.length - 2].risk;
-                const delta = risk - prev;
-                if (delta > 0.05) {
-                    if (rateValElem) rateValElem.innerHTML = '<span class="text-danger"><i class="bi bi-arrow-up-right"></i> Surging</span>';
-                } else if (delta < -0.05) {
-                    if (rateValElem) rateValElem.innerHTML = '<span class="text-success"><i class="bi bi-arrow-down-right"></i> Declining</span>';
-                } else {
-                    if (rateValElem) rateValElem.innerHTML = '<span class="text-cyan"><i class="bi bi-dash"></i> Steady</span>';
-                }
-            }
-
-            if (statusBadge) {
-                if (risk > 0.65) {
-                    statusBadge.className = 'badge-pill badge-danger';
-                    statusBadge.innerHTML = '<span class="pulse-dot dot-red"></span> SPIKE ALERT';
-                } else if (risk > 0.40) {
-                    statusBadge.className = 'badge-pill badge-medium';
-                    statusBadge.innerHTML = '<span class="pulse-dot dot-yellow"></span> ELEVATED';
-                } else {
-                    statusBadge.className = 'badge-pill badge-safe';
-                    statusBadge.innerHTML = '<span class="pulse-dot dot-green"></span> STREAM NORMAL';
-                }
-            }
-
-            // Render SVG Waveform inside fixed viewBox 0 0 500 130
-            renderVelocitySvg();
-        }
-
-        function renderVelocitySvg() {
-            const linePath = document.getElementById('velocityLinePath');
-            const areaPath = document.getElementById('velocityAreaPath');
-            const headPoint = document.getElementById('velocityHeadPoint');
-            if (!linePath || !areaPath || velocityHistory.length === 0) return;
-
-            const xMin = 20, xMax = 480;
-            const yMin = 20, yMax = 110; // yMin is risk=1.0, yMax is risk=0.0
-            const n = velocityHistory.length;
-
-            const pts = velocityHistory.map((pt, i) => {
-                const x = n === 1 ? xMax : (xMin + (i / (n - 1)) * (xMax - xMin));
-                const y = yMax - (pt.risk * (yMax - yMin));
-                return { x, y };
-            });
-
-            // Construct smooth line SVG path
-            let dLine = `M ${pts[0].x} ${pts[0].y}`;
-            for (let i = 1; i < pts.length; i++) {
-                const prev = pts[i - 1];
-                const curr = pts[i];
-                const cpX = (prev.x + curr.x) / 2;
-                dLine += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
-            }
-
-            // Construct enclosed area SVG path
-            const dArea = `${dLine} L ${pts[pts.length - 1].x} ${yMax} L ${pts[0].x} ${yMax} Z`;
-
-            linePath.setAttribute('d', dLine);
-            areaPath.setAttribute('d', dArea);
-
-            // Position head indicator
-            if (headPoint && pts.length > 0) {
-                const lastPt = pts[pts.length - 1];
-                headPoint.setAttribute('cx', lastPt.x);
-                headPoint.setAttribute('cy', lastPt.y);
-            }
-        }
-
         // ── Main Polling Routine ──────────────────────────────────────────────
         async function fetchAndRender() {
             try {
@@ -1512,8 +1078,6 @@
 
                 updateKPICards(stats);
                 populateTransactionsTable(txns);
-                updateRiskDistribution(stats);
-                updateRiskVelocity(stats.avg_risk, txns);
                 isInitialLoad = false;
             } catch (e) {
                 console.warn('Poll error:', e);
@@ -1558,13 +1122,12 @@
             const newTxns = data.filter(t => t.id > lastSeenId);
             if (data.length > 0) lastSeenId = Math.max(...data.map(t => t.id));
 
-            // Log new high-risk arrivals into the DEDICATED in-page Threat Feed (no popups)
+            // Log new high-risk arrivals into dedicated Threat Feed
             if (!isInitialLoad && newTxns.length > 0) {
                 newTxns.filter(t => (t.RiskScore > 0.7 || t.IsFraud) && !t.IsFrozen).forEach(t => {
                     logThreatAlert(t);
                 });
             } else if (isInitialLoad && data.length > 0) {
-                // Seed initial recent threats into feed on first load
                 data.filter(t => (t.RiskScore > 0.7 || t.IsFraud)).slice(0, 5).forEach(t => {
                     logThreatAlert(t);
                 });
@@ -1856,7 +1419,7 @@
                 const now  = new Date().toISOString().replace('T',' ').substring(0,19);
                 const prev = new Date(Date.now() - 86400000).toISOString().replace('T',' ').substring(0,19);
                 const payload = {
-                    AccountID: document.getElementById('account-id').value || 'AC00001',
+                    AccountID: document.getElementById('account-id').value || 'AC00128',
                     TransactionAmount: parseFloat(document.getElementById('amount').value) || 100,
                     TransactionType: document.getElementById('type').value,
                     Channel: document.getElementById('channel').value,
