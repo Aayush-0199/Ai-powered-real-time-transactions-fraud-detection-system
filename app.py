@@ -33,9 +33,9 @@ profiler = CustomerRiskProfiler()
 drift_detector = ConceptDriftDetector()
 
 # ── Live Transaction Store ──────────────────────────────────────────────────
-# Thread-safe ring buffer keeping the last 500 analyzed transactions
+# Thread-safe ring buffer keeping the last 1000 analyzed transactions
 _store_lock = threading.Lock()
-live_transactions = deque(maxlen=500)
+live_transactions = deque(maxlen=1000)
 _txn_counter = 0  # global sequential ID
 
 # ── Frozen Accounts Store ──────────────────────────────────────────────────
@@ -342,6 +342,20 @@ def get_stats():
         'avg_risk':   avg_risk,
         'fraud_rate': round(flagged / total * 100, 1),
         'frozen':     frozen_cnt
+    })
+
+@app.route('/api/reset', methods=['POST', 'GET'])
+def reset_live_store():
+    """Reset the live transaction ring buffer and counter."""
+    global _txn_counter
+    with _store_lock:
+        live_transactions.clear()
+        _txn_counter = 0
+    return jsonify({
+        'status': 'success',
+        'message': 'Live transaction ring buffer reset successfully. Limit set to 1000.',
+        'buffer_size': len(live_transactions),
+        'maxlen': live_transactions.maxlen
     })
 
 # ── Incident Response: Account Freeze & Block Endpoints ─────────────────────
