@@ -3,435 +3,866 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraud Detection Dashboard</title>
+    <title>FraudShield AI — Real-Time Transaction Intelligence</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js & Vis Network -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
+
     <style>
         :root {
-            --sidebar-width: 280px;
-            --risk-high: #dc3545;
-            --risk-medium: #ffc107;
-            --risk-low: #28a745;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .card {
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border: none;
-            border-radius: 10px;
-            transition: transform 0.2s;
-        }
-        
-        .card:hover {
-            box-shadow: 0 6px 18px rgba(0,0,0,0.13);
-        }
-        
-        .risk-high {
-            border-left: 4px solid var(--risk-high);
-        }
-        
-        .risk-medium {
-            border-left: 4px solid var(--risk-medium);
-        }
-        
-        .risk-low {
-            border-left: 4px solid var(--risk-low);
-        }
-        
-        .sidebar {
-            background-color: #2c3e50;
-            color: white;
-            height: 100vh;
-            position: fixed;
-            width: var(--sidebar-width);
-            padding: 20px 0;
-            overflow-y: auto;
-        }
-        
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 20px;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-        }
-        
-        .nav-link {
-            color: rgba(255,255,255,0.8);
-            padding: 12px 20px;
-            margin: 5px 10px;
-            border-radius: 5px;
-            transition: all 0.3s;
-        }
-        
-        .nav-link:hover, .nav-link.active {
-            background-color: #34495e;
-            color: white;
-        }
-        
-        .nav-link i {
-            width: 24px;
-            text-align: center;
-        }
-        
-        .badge-risk {
-            padding: 5px 8px;
-            border-radius: 12px;
-            font-weight: 500;
-        }
-        
-        #network-graph {
-            width: 100%;
-            height: 300px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            background-color: white;
-        }
-        
-        .model-status {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        
-        .status-active {
-            background-color: #28a745;
-        }
-        
-        .status-warning {
-            background-color: #ffc107;
-        }
-        
-        .status-danger {
-            background-color: #dc3545;
-        }
-        
-        .feature-impact {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        
-        .feature-bar {
-            height: 8px;
-            margin-left: 10px;
-            border-radius: 4px;
-        }
-        
-        .impact-positive {
-            background-color: #dc3545;
-        }
-        
-        .impact-negative {
-            background-color: #28a745;
-        }
-        
-        .drift-alert {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(220,53,69,0); }
-            100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+            --bg-base: #0a0e17;
+            --bg-surface: #111726;
+            --bg-card: #151d30;
+            --bg-card-hover: #19233a;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focus: rgba(99, 102, 241, 0.5);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-cyan: #06b6d4;
+            --risk-danger: #ef4444;
+            --risk-warning: #f59e0b;
+            --risk-safe: #10b981;
+            --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
-        /* Fix for the scrolling issue */
-        html, body {
-            height: 100%;
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
-        
-        .container-fluid {
-            padding-right: 15px;
-            padding-left: 15px;
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            overflow-x: hidden;
         }
-        
-        .table-responsive {
-            overflow-x: auto;
+
+        /* ── APP GRID LAYOUT (Bulletproof 2-Column Desktop Architecture) ── */
+        .app-shell {
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+        }
+
+        /* ── SIDEBAR ── */
+        .app-sidebar {
+            background: linear-gradient(180deg, #0d1322 0%, #090d17 100%);
+            border-right: 1px solid var(--border-subtle);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 8px;
+            text-decoration: none;
+        }
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+        .brand-text h1 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #fff;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .brand-text span {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .nav-section-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 700;
+            padding: 0 12px;
+            margin-bottom: 6px;
+        }
+
+        .side-nav {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .side-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .side-nav a:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .side-nav a.active {
+            color: #fff;
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0.05) 100%);
+            border-left: 3px solid var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .side-nav a i {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+        .side-nav a.active i {
+            color: var(--accent-primary);
+        }
+
+        .sidebar-widget {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: auto;
+        }
+        .sidebar-widget-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .engine-status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            padding: 4px 0;
+            color: var(--text-secondary);
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .dot-green { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+        .dot-yellow { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+        .dot-red { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+
+        /* ── MAIN CONTENT AREA ── */
+        .app-main {
+            padding: 24px 32px 48px;
+            min-width: 0; /* CRUCIAL: stops flex/grid children from stretching viewport */
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ── TOP ACTION HEADER ── */
+        .top-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .header-title h2 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: #fff;
+            margin: 0;
+        }
+        .header-title p {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin: 2px 0 0;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-modern {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        .btn-modern:hover {
+            background: var(--bg-card-hover);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .btn-modern-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-color: #6366f1;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+        .btn-modern-primary:hover {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
+            color: #fff;
+        }
+        .btn-modern-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+        .btn-modern-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fff;
+        }
+
+        /* ── METRIC STAT CARDS (Strict 4-Column Grid) ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            min-width: 0;
+        }
+        .stat-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .stat-card:hover {
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-primary);
+        }
+        .stat-card.risk-danger::before { background: var(--risk-danger); }
+        .stat-card.risk-warning::before { background: var(--risk-warning); }
+        .stat-card.risk-safe::before { background: var(--risk-safe); }
+        .stat-card.risk-cyan::before { background: var(--accent-cyan); }
+
+        .stat-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .stat-label {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.1;
+            font-family: var(--font-mono);
+        }
+        .stat-subtext {
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 2px;
+            color: var(--text-secondary);
+        }
+        .stat-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+        }
+
+        /* ── SECTION 1: TRANSACTIONS & SIDE PANELS (2-Column CSS Grid) ── */
+        .workspace-grid-split {
+            display: grid;
+            grid-template-columns: minmax(0, 1.9fr) minmax(0, 1.1fr);
+            gap: 20px;
+            min-width: 0;
+            align-items: start;
+        }
+
+        /* ── CARDS BASE ── */
+        .panel-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .panel-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #fff;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-body {
+            padding: 18px 20px;
+            min-width: 0;
+        }
+
+        /* ── TRANSACTIONS TABLE ── */
+        .table-container {
+            max-height: 520px;
+            overflow-y: auto;
+            min-width: 0;
+        }
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .custom-table th {
+            position: sticky;
+            top: 0;
+            background: #151c2c;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-subtle);
+            z-index: 2;
+        }
+        .custom-table td {
+            padding: 11px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .custom-table tr:hover td {
+            background-color: rgba(255, 255, 255, 0.03);
+            color: #fff;
+            cursor: pointer;
+        }
+        .code-acc {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #93c5fd;
+            background: rgba(147, 197, 253, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Risk Pill Badges */
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+        .badge-safe { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-blocked { background: #ef4444; color: #fff; font-weight: 800; animation: blockedBlink 1.5s infinite; }
+
+        @keyframes blockedBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes rowFlash {
+            0%   { background-color: rgba(99, 102, 241, 0.35); }
+            100% { background-color: transparent; }
+        }
+
+        /* ── SECTION 2: CHARTS & NETWORK GRAPH (Strict 2-Column Grid) ── */
+        .workspace-grid-half {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            min-width: 0;
+        }
+
+        /* Strictly bounded chart containers to prevent Chart.js infinite growth loop */
+        .chart-box {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            max-height: 250px;
+            min-height: 250px;
+        }
+
+        #network-graph {
+            width: 100%;
+            height: 250px;
+            max-height: 250px;
+            border-radius: 8px;
+            background: #0d121f;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* ── FORM ELEMENTS ── */
+        .form-control-modern, .form-select-modern {
+            width: 100%;
+            background: #0d121f;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 0.82rem;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control-modern:focus, .form-select-modern:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+            color: #fff;
+            background: #0d121f;
+        }
+        .form-label-modern {
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        /* ── TOAST ALERT SYSTEM ── */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 380px;
+            pointer-events: none;
+        }
+        .custom-toast {
+            background: #1e1420;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-left: 5px solid #ef4444;
+            border-radius: 10px;
+            padding: 14px 16px;
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(239, 68, 68, 0.2);
+            pointer-events: auto;
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+        /* Dark Modals */
+        .modal-content {
+            background-color: #111726;
+            border: 1px solid var(--border-subtle);
+            color: #f1f5f9;
+            border-radius: 14px;
+        }
+        .modal-header {
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .modal-footer {
+            border-top: 1px solid var(--border-subtle);
+        }
+        .btn-close-white {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .workspace-grid-split { grid-template-columns: 1fr; }
+            .workspace-grid-half { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 900px) {
+            .app-shell { grid-template-columns: 1fr; }
+            .app-sidebar { display: none; }
+            .app-main { padding: 16px; }
         }
     </style>
 </head>
 <body>
-    <!-- Toast Notification Container for High-Risk Alerts -->
-    <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 99999; max-width: 400px;"></div>
 
-    <div class="sidebar">
-        <div class="text-center mb-4 p-3">
-            <h3><i class="bi bi-shield-lock me-2"></i>Fraud Detection</h3>
-            <small class="text-muted">Real-time Monitoring System</small>
-        </div>
-        <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link active" href="#"><i class="bi bi-speedometer2"></i> Dashboard</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#" id="alerts-link"><i class="bi bi-flag"></i> Alerts <span class="badge bg-danger float-end" id="alerts-count">0</span></a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#"><i class="bi bi-people"></i> Customers</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#"><i class="bi bi-file-earmark-text"></i> Reports</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#"><i class="bi bi-graph-up"></i> Analytics</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#"><i class="bi bi-gear"></i> Settings</a>
-            </li>
-        </ul>
-        
-        <div class="p-3 mt-auto">
-            <div class="card bg-dark text-white">
-                <div class="card-body p-3">
-                    <h6 class="card-title">System Status</h6>
-                    <div class="model-status">
-                        <span class="status-indicator status-active"></span>
-                        <span>XGBoost Model</span>
-                    </div>
-                    <div class="model-status">
-                        <span class="status-indicator status-active"></span>
-                        <span>Isolation Forest</span>
-                    </div>
-                    <div class="model-status">
-                        <span class="status-indicator status-active"></span>
-                        <span>GNN Network</span>
-                    </div>
-                    <div class="model-status" id="drift-status">
-                        <span class="status-indicator status-active"></span>
-                        <span>Concept Drift</span>
-                    </div>
-                    <div class="model-status" id="frozen-status">
-                        <span class="status-indicator status-active" id="frozen-indicator"></span>
-                        <span>Frozen Accounts: <strong id="sidebar-frozen-count">0</strong></span>
-                    </div>
+    <!-- Floating Fraud Toast Alerts Container -->
+    <div id="toast-container"></div>
+
+    <div class="app-shell">
+        <!-- ── SIDEBAR ── -->
+        <aside class="app-sidebar">
+            <a href="#" class="brand-logo">
+                <div class="brand-icon">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>FraudShield</h1>
+                    <span>AI Guardian v2.4</span>
+                </div>
+            </a>
+
+            <div>
+                <div class="nav-section-label">Monitoring</div>
+                <ul class="side-nav">
+                    <li><a href="#" class="active"><i class="bi bi-grid-1x2-fill"></i> Live Dashboard</a></li>
+                    <li><a href="#alerts-section"><i class="bi bi-shield-exclamation"></i> Threat Alerts <span class="badge-pill badge-danger ms-auto" id="alerts-count">0</span></a></li>
+                    <li><a href="#transactions-section"><i class="bi bi-receipt-cutoff"></i> Audit Ledger</a></li>
+                    <li><a href="#" onclick="openFrozenAccountsModal()"><i class="bi bi-lock-fill text-warning"></i> Frozen Accounts <span class="badge-pill badge-danger ms-auto" id="sidebar-frozen-count">0</span></a></li>
+                </ul>
+            </div>
+
+            <div>
+                <div class="nav-section-label">AI & Graph Engines</div>
+                <ul class="side-nav">
+                    <li><a href="#network-section"><i class="bi bi-diagram-3"></i> Graph Network</a></li>
+                    <li><a href="#"><i class="bi bi-cpu"></i> XGBoost + GNN</a></li>
+                    <li><a href="#"><i class="bi bi-sliders"></i> Drift Detector</a></li>
+                </ul>
+            </div>
+
+            <!-- Engine Health Status Box -->
+            <div class="sidebar-widget">
+                <div class="sidebar-widget-title">
+                    <span>Engine Telemetry</span>
+                    <span class="badge-pill badge-safe">ACTIVE</span>
+                </div>
+                <div class="engine-status-row">
+                    <span><span class="pulse-dot dot-green"></span>XGBoost Classifier</span>
+                    <span class="text-white font-monospace">99.8%</span>
+                </div>
+                <div class="engine-status-row">
+                    <span><span class="pulse-dot dot-green"></span>Isolation Forest</span>
+                    <span class="text-white font-monospace">Ready</span>
+                </div>
+                <div class="engine-status-row">
+                    <span><span class="pulse-dot dot-green"></span>GNN Topology</span>
+                    <span class="text-white font-monospace">Live</span>
+                </div>
+                <div class="engine-status-row" id="drift-status">
+                    <span><span class="pulse-dot dot-green"></span>Concept Drift</span>
+                    <span class="text-white font-monospace" id="drift-text">Stable</span>
+                </div>
+                <div class="engine-status-row">
+                    <span><span class="pulse-dot dot-yellow" id="frozen-pulse"></span>Blocked Accts</span>
+                    <span class="text-white font-monospace" id="frozen-sub-count">0</span>
                 </div>
             </div>
-        </div>
-    </div>
+        </aside>
 
-    <div class="main-content">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                <h2 class="mb-0">Transaction Monitoring Dashboard</h2>
-                <div class="d-flex align-items-center gap-2">
-                    <button id="soundToggleBtn" class="btn btn-outline-secondary btn-sm" onclick="toggleSoundAlerts()" title="Toggle audible fraud alert chime">
-                        <i class="bi bi-volume-up-fill text-success" id="soundIcon"></i> <span id="soundLabel">Sound ON</span>
+        <!-- ── MAIN DASHBOARD ── -->
+        <main class="app-main">
+            <!-- Top App Bar -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h2>Live Fraud Intelligence Dashboard</h2>
+                    <p>Sub-second cognitive transaction analysis, graph anomaly clustering & incident response</p>
+                </div>
+                <div class="header-actions">
+                    <button id="soundToggleBtn" class="btn-modern" onclick="toggleSoundAlerts()" title="Toggle audible fraud chime">
+                        <i class="bi bi-volume-up-fill text-success" id="soundIcon"></i>
+                        <span id="soundLabel">Sound ON</span>
                     </button>
-                    <button id="frozenAccountsBtn" class="btn btn-outline-danger btn-sm" onclick="openFrozenAccountsModal()" title="View and manage frozen accounts">
-                        <i class="bi bi-shield-lock-fill"></i> Frozen Accounts <span class="badge bg-danger ms-1" id="frozen-count-badge">0</span>
+                    <button class="btn-modern btn-modern-danger" onclick="openFrozenAccountsModal()">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Frozen Accounts</span>
+                        <span class="badge-pill badge-danger" id="frozen-count-badge">0</span>
                     </button>
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" id="timeRangeDropdown" data-bs-toggle="dropdown">
-                            <i class="bi bi-calendar-week"></i> Last 24 Hours
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Last 24 Hours</a></li>
-                            <li><a class="dropdown-item" href="#">Last 7 Days</a></li>
-                            <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
-                            <li><a class="dropdown-item" href="#">Custom Range</a></li>
-                        </ul>
-                    </div>
+                    <button class="btn-modern" id="refresh-btn">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="btn-modern btn-modern-primary" id="generate-report-btn">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                        <span>Generate SAR</span>
+                    </button>
                 </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title text-muted">Total Transactions</h5>
-                            <h2 class="card-text" id="total-transactions">0</h2>
-                            <small class="text-success"><i class="bi bi-arrow-up"></i> 12% from yesterday</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title text-muted">Flagged Transactions</h5>
-                            <h2 class="card-text" id="flagged-transactions">0</h2>
-                            <small class="text-danger"><i class="bi bi-arrow-up"></i> 8% from yesterday</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title text-muted">High Risk</h5>
-                            <h2 class="card-text" id="high-risk">0</h2>
-                            <small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Needs review</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5 class="card-title text-muted">Avg Risk Score</h5>
-                            <h2 class="card-text" id="avg-risk">0</h2>
-                            <small id="risk-trend" class="text-success"><i class="bi bi-arrow-down"></i> 5% from yesterday</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </header>
 
-            <div class="row mt-4 g-3">
-                <div class="col-md-8">
-                    <div class="card mb-0">
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="card-title mb-0">Recent Transactions</h5>
-                                <div>
-                                    <button class="btn btn-sm btn-outline-primary me-2" id="refresh-btn">
-                                        <i class="bi bi-arrow-clockwise"></i> Refresh
-                                    </button>
-                                    <button class="btn btn-sm btn-primary" id="generate-report-btn">
-                                        <i class="bi bi-file-earmark-pdf"></i> Generate Report
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="table-responsive" style="max-height: 460px; overflow-y: auto;">
-                                <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
-                                    <thead class="table-light sticky-top" style="z-index: 1; top: 0;">
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Account</th>
-                                            <th>Amount</th>
-                                            <th>Type</th>
-                                            <th>Location</th>
-                                            <th>Risk</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="transactions-table">
-                                        <!-- Filled by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
+            <!-- Top 4 KPI Metrics (Strict CSS Grid) -->
+            <section class="stats-grid">
+                <div class="stat-card risk-cyan">
+                    <div class="stat-content">
+                        <span class="stat-label">Total Ingested</span>
+                        <div class="stat-value" id="total-transactions">0</div>
+                        <span class="stat-subtext text-success"><i class="bi bi-activity"></i> Stream active</span>
+                    </div>
+                    <div class="stat-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                </div>
+
+                <div class="stat-card risk-warning">
+                    <div class="stat-content">
+                        <span class="stat-label">Suspicious Flagged</span>
+                        <div class="stat-value" id="flagged-transactions">0</div>
+                        <span class="stat-subtext text-warning"><i class="bi bi-exclamation-triangle"></i> Automated flags</span>
+                    </div>
+                    <div class="stat-icon"><i class="bi bi-shield-slash"></i></div>
+                </div>
+
+                <div class="stat-card risk-danger">
+                    <div class="stat-content">
+                        <span class="stat-label">High-Risk Threats</span>
+                        <div class="stat-value" id="high-risk">0</div>
+                        <span class="stat-subtext text-danger" id="high-risk-sub"><i class="bi bi-fire"></i> Action required</span>
+                    </div>
+                    <div class="stat-icon"><i class="bi bi-shield-x"></i></div>
+                </div>
+
+                <div class="stat-card risk-safe">
+                    <div class="stat-content">
+                        <span class="stat-label">Average Risk Index</span>
+                        <div class="stat-value" id="avg-risk">0.000</div>
+                        <span class="stat-subtext" id="risk-trend"><i class="bi bi-check2-circle"></i> Baseline normal</span>
+                    </div>
+                    <div class="stat-icon"><i class="bi bi-speedometer2"></i></div>
+                </div>
+            </section>
+
+            <!-- Middle Section: Table (Left) & Risk Donut + Analyzer (Right) -->
+            <section class="workspace-grid-split" id="transactions-section">
+                <!-- Left: Recent Transactions Table -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="bi bi-hdd-stack text-primary"></i> Live Transaction Ledger</h3>
+                        <span class="badge-pill badge-safe"><i class="bi bi-broadcast"></i> REAL-TIME</span>
+                    </div>
+                    <div class="panel-body p-0">
+                        <div class="table-container">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>Txn ID</th>
+                                        <th>Account</th>
+                                        <th>Amount</th>
+                                        <th>Type</th>
+                                        <th>Location</th>
+                                        <th>Risk Score</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-table">
+                                    <!-- Populated via JS -->
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4 text-muted">
+                                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                                            Awaiting transaction stream...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-4">
+
+                <!-- Right: Risk Donut Chart & Instant Analysis Form -->
+                <div style="display: flex; flex-direction: column; gap: 20px; min-width: 0;">
                     <!-- Risk Distribution Donut Chart -->
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title mb-2">Risk Distribution</h5>
-                            <div style="position: relative; height: 200px; width: 100%;">
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="bi bi-pie-chart text-info"></i> Risk Category Distribution</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="chart-box" style="height: 180px; min-height: 180px; max-height: 180px;">
                                 <canvas id="riskChart"></canvas>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Transaction Analysis Form -->
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title mb-2">Transaction Analysis</h5>
+
+                    <!-- Instant Transaction Analysis Form -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h3><i class="bi bi-lightning-charge text-warning"></i> Manual Threat Evaluation</h3>
+                        </div>
+                        <div class="panel-body">
                             <form id="transaction-form">
-                                <div class="mb-2">
-                                    <label class="form-label small mb-1">Account ID</label>
-                                    <input type="text" class="form-control form-control-sm" id="account-id" required value="AC00128">
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small mb-1">Amount ($)</label>
-                                    <input type="number" step="0.01" class="form-control form-control-sm" id="amount" required value="250.00">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label-modern">Account ID</label>
+                                        <input type="text" class="form-control-modern" id="account-id" required value="AC00128">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label-modern">Amount ($)</label>
+                                        <input type="number" step="0.01" class="form-control-modern" id="amount" required value="4500.00">
+                                    </div>
                                 </div>
                                 <div class="row g-2 mb-2">
                                     <div class="col-6">
-                                        <label class="form-label small mb-1">Type</label>
-                                        <select class="form-select form-select-sm" id="type">
+                                        <label class="form-label-modern">Type</label>
+                                        <select class="form-select-modern" id="type">
                                             <option value="Debit">Debit</option>
                                             <option value="Credit">Credit</option>
                                         </select>
                                     </div>
                                     <div class="col-6">
-                                        <label class="form-label small mb-1">Channel</label>
-                                        <select class="form-select form-select-sm" id="channel">
+                                        <label class="form-label-modern">Channel</label>
+                                        <select class="form-select-modern" id="channel">
                                             <option value="Online">Online</option>
                                             <option value="ATM">ATM</option>
                                             <option value="Branch">Branch</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label small mb-1">Location</label>
-                                    <input type="text" class="form-control form-control-sm" id="location" value="New York">
+                                <div class="mb-3">
+                                    <label class="form-label-modern">Location</label>
+                                    <input type="text" class="form-control-modern" id="location" value="Lagos, Nigeria">
                                 </div>
-                                <button type="submit" class="btn btn-primary btn-sm w-100">
-                                    <i class="bi bi-shield-check"></i> Analyze
+                                <button type="submit" class="btn-modern btn-modern-primary w-100 justify-content-center">
+                                    <i class="bi bi-cpu"></i> Run Multi-Model Evaluation
                                 </button>
                             </form>
-                            <div id="analysis-result" class="mt-2" style="font-size:0.82rem;"></div>
+                            <div id="analysis-result" class="mt-2"></div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Row 3: Risk Over Time & Transaction Network Graph -->
-            <div class="row mt-3 g-3">
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title mb-3">Risk Over Time</h5>
-                            <div style="position: relative; height: 250px; width: 100%;">
-                                <canvas id="riskTrendChart"></canvas>
-                            </div>
+            </section>
+
+            <!-- Bottom Section: Risk Over Time (Left) & Network Topology Graph (Right) -->
+            <section class="workspace-grid-half" id="network-section">
+                <!-- Risk Trend Line Chart -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="bi bi-graph-up-arrow text-danger"></i> Temporal Risk Trajectory</h3>
+                        <span class="badge-pill badge-medium">60 SEC ROLLING</span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="chart-box">
+                            <canvas id="riskTrendChart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title mb-2">Transaction Network</h5>
-                            <div id="network-graph" style="height: 225px;"></div>
-                            <div class="mt-2 d-flex gap-2">
-                                <span class="badge bg-primary">Account</span>
-                                <span class="badge bg-success">Merchant</span>
-                                <span class="badge bg-warning text-dark">Device</span>
-                            </div>
+                <!-- Vis-Network Graph Visualizer -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3><i class="bi bi-diagram-3-fill text-primary"></i> Entity Graph Topology</h3>
+                        <div class="d-flex gap-2">
+                            <span class="badge-pill badge-safe" style="font-size: 0.65rem;">Account</span>
+                            <span class="badge-pill badge-medium" style="font-size: 0.65rem;">Merchant</span>
+                            <span class="badge-pill badge-danger" style="font-size: 0.65rem;">Device</span>
                         </div>
                     </div>
+                    <div class="panel-body">
+                        <div id="network-graph"></div>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Transaction Detail Modal -->
+    <!-- ── TRANSACTION DETAIL MODAL ── -->
     <div class="modal fade" id="transactionModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-receipt me-2"></i>Transaction Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title font-monospace"><i class="bi bi-search text-primary me-2"></i>Transaction Anomaly Breakdown</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="transaction-detail">
-                    <!-- Filled by JavaScript -->
+                    <!-- Loaded dynamically -->
                 </div>
                 <div class="modal-footer d-flex justify-content-between">
                     <div>
-                        <button type="button" class="btn btn-danger" id="detail-freeze-btn" onclick="toggleFreezeCurrentDetail()">
+                        <button type="button" class="btn btn-danger btn-sm" id="detail-freeze-btn" onclick="toggleFreezeCurrentDetail()">
                             <i class="bi bi-shield-slash-fill me-1"></i> Freeze Account
                         </button>
                     </div>
-                    <div>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="detail-sar-btn" onclick="generateSARForCurrent()">
-                            <i class="bi bi-file-earmark-pdf"></i> Generate SAR
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="detail-sar-btn" onclick="generateSARForCurrent()">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> Export SAR PDF
                         </button>
                     </div>
                 </div>
@@ -439,59 +870,64 @@
         </div>
     </div>
 
-    <!-- Frozen Accounts Incident Response Modal -->
+    <!-- ── FROZEN ACCOUNTS INCIDENT RESPONSE MODAL ── -->
     <div class="modal fade" id="frozenAccountsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title"><i class="bi bi-shield-lock-fill text-danger me-2"></i>Incident Response: Frozen Accounts</h5>
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-shield-lock-fill me-2"></i>Incident Response: Frozen Accounts</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-warning mb-3 d-flex align-items-center">
-                        <i class="bi bi-exclamation-triangle-fill fs-4 me-2 text-warning"></i>
-                        <div>
-                            <strong>Active Interception Enabled:</strong> All incoming transactions for frozen accounts are immediately rejected with status <code>BLOCKED</code>.
+                    <div class="p-3 mb-3 rounded" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <div class="d-flex align-items-center gap-2 text-danger fw-bold mb-1">
+                            <i class="bi bi-exclamation-octagon-fill"></i> Real-Time Interception Active
+                        </div>
+                        <div class="small text-muted">
+                            All incoming transactions belonging to frozen accounts are immediately blocked with HTTP 403 and logged with status <code>BLOCKED</code>.
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
+
+                    <div class="table-container" style="max-height: 320px;">
+                        <table class="custom-table">
+                            <thead>
                                 <tr>
                                     <th>Account ID</th>
                                     <th>Frozen At</th>
                                     <th>Reason</th>
-                                    <th class="text-end">Action</th>
+                                    <th style="text-align: right;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="frozen-accounts-table">
-                                <tr><td colspan="4" class="text-center text-muted py-3">No accounts currently frozen.</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4">No accounts currently frozen.</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- App Logic -->
     <script>
-        // ── Globals ─────────────────────────────────────────────────────────
+        // ── State & Config ──
         let riskChart, riskTrendChart, network;
-        const txnModal = new bootstrap.Modal('#transactionModal');
-        const frozenModal = new bootstrap.Modal('#frozenAccountsModal');
-        const POLL_INTERVAL = 2000; // ms
-        let lastSeenId = 0;         // track newest txn seen so we can flash new rows
-        const trendData = [];       // rolling avg risk scores for the line chart
+        const txnModal = new bootstrap.Modal(document.getElementById('transactionModal'));
+        const frozenModal = new bootstrap.Modal(document.getElementById('frozenAccountsModal'));
+        const POLL_INTERVAL = 2000;
+        let lastSeenId = 0;
         let currentDetailTxn = null;
         let soundEnabled = true;
         let audioCtx = null;
         let isInitialLoad = true;
 
-        // ── Web Audio Chime (Feature 1) ──────────────────────────────────────
+        // ── Feature 1: Web Audio Chime for High-Risk Alerts ──
         function toggleSoundAlerts() {
             soundEnabled = !soundEnabled;
             const icon = document.getElementById('soundIcon');
@@ -521,7 +957,7 @@
                 const gain = audioCtx.createGain();
 
                 osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(880, now); // A5
+                osc1.frequency.setValueAtTime(880, now);
                 osc1.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
 
                 osc2.type = 'triangle';
@@ -544,69 +980,46 @@
             }
         }
 
-        // ── Toast Notifications (Feature 1) ──────────────────────────────────
         function showFraudToast(t) {
             playAlertChime();
             const container = document.getElementById('toast-container');
             if (!container) return;
 
             const toastId = 'toast-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-            const toastEl = document.createElement('div');
-            toastEl.className = 'toast align-items-center text-white bg-danger border-0 mb-2 shadow-lg';
-            toastEl.id = toastId;
-            toastEl.setAttribute('role', 'alert');
-            toastEl.setAttribute('aria-live', 'assertive');
-            toastEl.setAttribute('aria-atomic', 'true');
+            const el = document.createElement('div');
+            el.className = 'custom-toast';
+            el.id = toastId;
 
-            toastEl.innerHTML = `
-                <div class="d-flex p-3">
-                    <div class="toast-body p-0 flex-grow-1">
-                        <div class="d-flex align-items-center mb-1">
-                            <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
-                            <strong>HIGH-RISK FRAUD DETECTED</strong>
-                        </div>
-                        <div><strong>Account:</strong> <code>${t.AccountID}</code> | <strong>$${parseFloat(t.TransactionAmount).toFixed(2)}</strong></div>
-                        <div class="small">Risk Score: <strong>${(t.RiskScore||0).toFixed(3)}</strong> | ${t.Location || 'Unknown'}</div>
-                        <div class="mt-2 pt-2 border-top border-white-50 d-flex gap-2">
-                            <button class="btn btn-sm btn-light text-danger fw-bold" onclick="toggleFreezeAccount('${t.AccountID}', true); bootstrap.Toast.getInstance(document.getElementById('${toastId}')).hide();">
-                                <i class="bi bi-shield-slash-fill"></i> Freeze Account
-                            </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="showTransactionDetail(${JSON.stringify(t).replace(/"/g,'&quot;')}); bootstrap.Toast.getInstance(document.getElementById('${toastId}')).hide();">
-                                <i class="bi bi-search"></i> Inspect
-                            </button>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="toast"></button>
+            el.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="badge-pill badge-danger"><i class="bi bi-exclamation-triangle-fill"></i> FRAUD THREAT DETECTED</span>
+                    <button type="button" class="btn-close btn-close-white" style="font-size: 0.65rem;" onclick="document.getElementById('${toastId}').remove()"></button>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">
+                    Account <span class="code-acc">${t.AccountID}</span> &bull; $${parseFloat(t.TransactionAmount).toFixed(2)}
+                </div>
+                <div style="font-size: 0.76rem; color: #94a3b8; margin: 4px 0 10px;">
+                    Risk Score: <strong class="text-danger font-monospace">${(t.RiskScore||0).toFixed(3)}</strong> &bull; ${t.Location || 'Unknown'}
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-danger btn-sm py-1 px-2" style="font-size: 0.74rem;" onclick="toggleFreezeAccount('${t.AccountID}', true); document.getElementById('${toastId}').remove();">
+                        <i class="bi bi-shield-slash-fill"></i> Freeze Account
+                    </button>
+                    <button class="btn btn-outline-light btn-sm py-1 px-2" style="font-size: 0.74rem;" onclick="showTransactionDetail(${JSON.stringify(t).replace(/"/g,'&quot;')}); document.getElementById('${toastId}').remove();">
+                        <i class="bi bi-search"></i> Inspect
+                    </button>
                 </div>
             `;
 
-            container.appendChild(toastEl);
-            const bsToast = new bootstrap.Toast(toastEl, { delay: 10000 });
-            bsToast.show();
-            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+            container.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 8000);
         }
 
-        function showInfoToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-            const toastEl = document.createElement('div');
-            toastEl.className = `toast align-items-center text-white bg-${type === 'danger' ? 'danger' : type === 'success' ? 'success' : 'primary'} border-0 mb-2 shadow`;
-            toastEl.setAttribute('role', 'alert');
-            toastEl.innerHTML = `
-                <div class="d-flex p-2">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            `;
-            container.appendChild(toastEl);
-            const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
-            bsToast.show();
-            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-        }
-
-        // ── Account Freeze Actions (Feature 2) ────────────────────────────────
+        // ── Feature 2: Account Freeze Interception ──
         async function toggleFreezeAccount(accountId, shouldFreeze, reason = 'Incident Response Action') {
-            const endpoint = shouldFreeze ? `/api/account/${encodeURIComponent(accountId)}/freeze` : `/api/account/${encodeURIComponent(accountId)}/unfreeze`;
+            const endpoint = shouldFreeze 
+                ? `/api/account/${encodeURIComponent(accountId)}/freeze` 
+                : `/api/account/${encodeURIComponent(accountId)}/unfreeze`;
             try {
                 const res = await fetch(endpoint, {
                     method: 'POST',
@@ -615,7 +1028,6 @@
                 });
                 const d = await res.json();
                 if (d.success) {
-                    showInfoToast(d.message, shouldFreeze ? 'danger' : 'success');
                     fetchAndRender();
                     loadFrozenAccounts();
                 } else {
@@ -649,17 +1061,17 @@
                 if (!tbody) return;
 
                 if (!data.accounts || data.accounts.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3"><i class="bi bi-shield-check text-success me-1"></i>No accounts currently frozen. All accounts active.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-shield-check text-success me-1"></i>No accounts currently frozen. All accounts operational.</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.accounts.map(acc => `
                     <tr>
-                        <td><strong><code>${acc.account_id}</code></strong></td>
-                        <td><small class="text-muted">${acc.frozen_at}</small></td>
-                        <td><span class="badge bg-danger">${acc.reason || 'Incident Response'}</span></td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-success" onclick="toggleFreezeAccount('${acc.account_id}', false)">
+                        <td><span class="code-acc">${acc.account_id}</span></td>
+                        <td class="font-monospace small text-muted">${acc.frozen_at}</td>
+                        <td><span class="badge-pill badge-danger">${acc.reason || 'Manual Intervention'}</span></td>
+                        <td style="text-align: right;">
+                            <button class="btn btn-outline-success btn-sm py-1 px-2" style="font-size: 0.74rem;" onclick="toggleFreezeAccount('${acc.account_id}', false)">
                                 <i class="bi bi-unlock-fill me-1"></i> Unfreeze
                             </button>
                         </td>
@@ -670,18 +1082,18 @@
             }
         }
 
-        // ── Boot ─────────────────────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', function () {
+        // ── Initialization ──
+        document.addEventListener('DOMContentLoaded', () => {
             initRiskChart();
             initRiskTrendChart();
             initNetworkGraph();
             setupEventListeners();
-            fetchAndRender();                            // immediate first load
-            setInterval(fetchAndRender, POLL_INTERVAL); // then poll every 2s
-            setInterval(checkDriftStatus, 10000);       // drift check every 10s
+            fetchAndRender();
+            setInterval(fetchAndRender, POLL_INTERVAL);
+            setInterval(checkDriftStatus, 10000);
         });
 
-        // ── Main poll ────────────────────────────────────────────────────────
+        // ── Main Polling Routine ──
         async function fetchAndRender() {
             try {
                 const [txnRes, statsRes] = await Promise.all([
@@ -702,43 +1114,46 @@
             }
         }
 
-        // ── KPI Cards ────────────────────────────────────────────────────────
+        // ── KPI Updates ──
         function updateKPICards(stats) {
             document.getElementById('total-transactions').textContent = stats.total;
             document.getElementById('flagged-transactions').textContent = stats.flagged;
             document.getElementById('high-risk').textContent = stats.high_risk;
-            document.getElementById('avg-risk').textContent = stats.avg_risk.toFixed(3);
+            document.getElementById('avg-risk').textContent = Number(stats.avg_risk).toFixed(3);
             document.getElementById('alerts-count').textContent = stats.flagged;
 
             const frozenCount = stats.frozen || 0;
             const frozenBadge = document.getElementById('frozen-count-badge');
             const sidebarFrozen = document.getElementById('sidebar-frozen-count');
-            const frozenIndicator = document.getElementById('frozen-indicator');
+            const frozenSub = document.getElementById('frozen-sub-count');
+            const frozenPulse = document.getElementById('frozen-pulse');
+
             if (frozenBadge) frozenBadge.textContent = frozenCount;
             if (sidebarFrozen) sidebarFrozen.textContent = frozenCount;
-            if (frozenIndicator) {
-                frozenIndicator.className = 'status-indicator ' + (frozenCount > 0 ? 'status-warning' : 'status-active');
+            if (frozenSub) frozenSub.textContent = frozenCount;
+            if (frozenPulse) {
+                frozenPulse.className = 'pulse-dot ' + (frozenCount > 0 ? 'dot-red' : 'dot-green');
             }
 
             const trendElem = document.getElementById('risk-trend');
-            if (stats.avg_risk > 0.5) {
-                trendElem.className = 'text-danger';
-                trendElem.innerHTML = `<i class="bi bi-arrow-up"></i> ${stats.fraud_rate}% fraud rate`;
+            if (stats.avg_risk > 0.45) {
+                trendElem.className = 'stat-subtext text-danger';
+                trendElem.innerHTML = `<i class="bi bi-arrow-up-right"></i> Elevated (${stats.fraud_rate}% fraud rate)`;
             } else {
-                trendElem.className = 'text-success';
-                trendElem.innerHTML = `<i class="bi bi-arrow-down"></i> ${stats.fraud_rate}% fraud rate`;
+                trendElem.className = 'stat-subtext text-success';
+                trendElem.innerHTML = `<i class="bi bi-check2-circle"></i> Normal (${stats.fraud_rate}% fraud rate)`;
             }
         }
 
-        // ── Transaction Table ────────────────────────────────────────────────
+        // ── Table Rendering ──
         function populateTransactionsTable(data) {
             const tableBody = document.getElementById('transactions-table');
+            if (!tableBody) return;
 
-            // Detect new rows (higher id than last seen)
             const newIds = new Set(data.filter(t => t.id > lastSeenId).map(t => t.id));
             if (data.length > 0) lastSeenId = Math.max(...data.map(t => t.id));
 
-            // Trigger alerts for newly arrived high-risk transactions (skip on initial page load)
+            // Trigger alerts for newly arrived high-risk transactions
             if (!isInitialLoad && newIds.size > 0) {
                 data.filter(t => newIds.has(t.id) && (t.RiskScore > 0.7 || t.IsFraud) && !t.IsFrozen).forEach(t => {
                     showFraudToast(t);
@@ -746,86 +1161,101 @@
             }
 
             tableBody.innerHTML = '';
-            data.forEach(transaction => {
-                const row = document.createElement('tr');
-                row.style.cursor = 'pointer';
-                row.addEventListener('click', () => showTransactionDetail(transaction));
+            data.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.addEventListener('click', () => showTransactionDetail(t));
 
-                const score = transaction.RiskScore;
-                const isBlocked = transaction.Status === 'BLOCKED' || transaction.IsFrozen;
+                const score = t.RiskScore || 0;
+                const isBlocked = t.Status === 'BLOCKED' || t.IsFrozen;
 
-                if (isBlocked) row.classList.add('table-danger');
-                else if (score > 0.7) row.classList.add('risk-high');
-                else if (score > 0.4) row.classList.add('risk-medium');
-                else row.classList.add('risk-low');
-
-                // Flash animation for brand-new rows
-                if (newIds.has(transaction.id)) {
-                    row.style.animation = 'rowFlash 1s ease-out';
+                if (newIds.has(t.id)) {
+                    tr.style.animation = 'rowFlash 1.2s ease-out';
                 }
 
-                let badgeClass = score > 0.7 ? 'bg-danger' : score > 0.4 ? 'bg-warning' : 'bg-success';
-                let statusBadge = isBlocked
-                    ? '<span class="badge bg-danger"><i class="bi bi-slash-circle me-1"></i>BLOCKED</span>'
-                    : transaction.IsFraud
-                    ? '<span class="badge bg-danger">Fraud</span>'
-                    : '<span class="badge bg-success">Clear</span>';
+                let badgeHtml = '';
+                if (isBlocked) {
+                    badgeHtml = '<span class="badge-pill badge-blocked"><i class="bi bi-slash-circle"></i> BLOCKED</span>';
+                } else if (score > 0.7) {
+                    badgeHtml = `<span class="badge-pill badge-danger"><i class="bi bi-exclamation-circle-fill"></i> ${score.toFixed(3)}</span>`;
+                } else if (score > 0.4) {
+                    badgeHtml = `<span class="badge-pill badge-medium">${score.toFixed(3)}</span>`;
+                } else {
+                    badgeHtml = `<span class="badge-pill badge-safe">${score.toFixed(3)}</span>`;
+                }
 
-                const freezeActionBtn = isBlocked
-                    ? `<button class="btn btn-sm btn-outline-success ms-1" title="Unfreeze Account" onclick="event.stopPropagation(); toggleFreezeAccount('${transaction.AccountID}', false)">
+                const statusPill = isBlocked 
+                    ? '<span class="text-danger fw-bold">Frozen</span>' 
+                    : t.IsFraud 
+                    ? '<span class="text-danger fw-bold">Flagged</span>' 
+                    : '<span class="text-success">Cleared</span>';
+
+                const freezeBtn = isBlocked
+                    ? `<button class="btn btn-outline-success btn-sm py-0 px-2" style="font-size: 0.72rem;" title="Unfreeze" onclick="event.stopPropagation(); toggleFreezeAccount('${t.AccountID}', false)">
                         <i class="bi bi-unlock-fill"></i> Unfreeze
                        </button>`
-                    : `<button class="btn btn-sm btn-outline-danger ms-1" title="Freeze Account" onclick="event.stopPropagation(); toggleFreezeAccount('${transaction.AccountID}', true)">
+                    : `<button class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size: 0.72rem;" title="Freeze" onclick="event.stopPropagation(); toggleFreezeAccount('${t.AccountID}', true)">
                         <i class="bi bi-shield-slash-fill"></i> Freeze
                        </button>`;
 
-                row.innerHTML = `
-                    <td>${transaction.TransactionID}</td>
-                    <td>${transaction.AccountID}
-                        ${score > 0.7 ? '<i class="bi bi-exclamation-triangle-fill text-danger ms-1"></i>' : ''}
+                tr.innerHTML = `
+                    <td class="font-monospace text-muted">${t.TransactionID}</td>
+                    <td>
+                        <span class="code-acc">${t.AccountID}</span>
                         ${isBlocked ? '<i class="bi bi-lock-fill text-danger ms-1" title="Account Frozen"></i>' : ''}
                     </td>
-                    <td>$${transaction.TransactionAmount.toFixed(2)}</td>
-                    <td>${transaction.TransactionType}</td>
-                    <td>${transaction.Location}</td>
-                    <td><span class="badge ${badgeClass}">${score.toFixed(3)}</span></td>
-                    <td>${statusBadge}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary"
-                            onclick="event.stopPropagation(); showTransactionDetail(${JSON.stringify(transaction).replace(/"/g,'&quot;')})">
+                    <td class="font-monospace fw-bold text-white">$${parseFloat(t.TransactionAmount).toFixed(2)}</td>
+                    <td>${t.TransactionType}</td>
+                    <td>${t.Location}</td>
+                    <td>${badgeHtml}</td>
+                    <td>${statusPill}</td>
+                    <td style="text-align: right;">
+                        <button class="btn btn-outline-primary btn-sm py-0 px-2 me-1" style="font-size: 0.72rem;" onclick="event.stopPropagation(); showTransactionDetail(${JSON.stringify(t).replace(/"/g,'&quot;')})">
                             <i class="bi bi-search"></i>
                         </button>
-                        ${freezeActionBtn}
-                    </td>`;
-                tableBody.appendChild(row);
+                        ${freezeBtn}
+                    </td>
+                `;
+                tableBody.appendChild(tr);
             });
         }
 
-        // ── Risk Donut Chart ─────────────────────────────────────────────────
+        // ── Chart.js Donut Chart ──
         function initRiskChart() {
             const ctx = document.getElementById('riskChart').getContext('2d');
             riskChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Low Risk', 'Medium Risk', 'High Risk'],
-                    datasets: [{ data: [0, 0, 0], backgroundColor: ['#28a745', '#ffc107', '#dc3545'], borderWidth: 0 }]
+                    datasets: [{
+                        data: [1, 0, 0],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#111726'
+                    }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '70%',
-                    plugins: { legend: { position: 'bottom' } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { size: 11, family: "'Plus Jakarta Sans'" }, boxWidth: 10, padding: 12 }
+                        }
+                    }
                 }
             });
         }
 
         function updateRiskChart(stats) {
-            const low    = stats.total - stats.flagged - Math.max(0, stats.high_risk - stats.flagged);
-            const medium = Math.max(0, stats.flagged - stats.high_risk);
-            const high   = stats.high_risk;
-            riskChart.data.datasets[0].data = [Math.max(0, low), medium, high];
+            const low = Math.max(0, stats.total - stats.flagged);
+            const med = Math.max(0, stats.flagged - stats.high_risk);
+            const high = stats.high_risk || 0;
+            riskChart.data.datasets[0].data = [low, med, high];
             riskChart.update('none');
         }
 
-        // ── Risk Trend Line Chart ────────────────────────────────────────────
+        // ── Chart.js Trend Line Chart ──
         function initRiskTrendChart() {
             const ctx = document.getElementById('riskTrendChart').getContext('2d');
             riskTrendChart = new Chart(ctx, {
@@ -833,148 +1263,193 @@
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Avg Risk Score',
+                        label: 'Average Risk Score',
                         data: [],
-                        borderColor: '#dc3545',
-                        backgroundColor: 'rgba(220,53,69,0.1)',
-                        tension: 0.3,
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                        tension: 0.35,
                         fill: true,
-                        pointRadius: 2
+                        pointRadius: 2,
+                        pointBackgroundColor: '#06b6d4'
                     }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
                     animation: false,
-                    scales: { y: { beginAtZero: true, max: 1.0 } }
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 6 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 1.0,
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: { color: '#64748b', font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
                 }
             });
         }
 
         function updateRiskTrend(avgRisk) {
-            const label = new Date().toLocaleTimeString();
-            riskTrendChart.data.labels.push(label);
+            const timeLabel = new Date().toLocaleTimeString();
+            riskTrendChart.data.labels.push(timeLabel);
             riskTrendChart.data.datasets[0].data.push(avgRisk);
-            // Keep last 60 data points
-            if (riskTrendChart.data.labels.length > 60) {
+            if (riskTrendChart.data.labels.length > 35) {
                 riskTrendChart.data.labels.shift();
                 riskTrendChart.data.datasets[0].data.shift();
             }
             riskTrendChart.update('none');
         }
 
-        // ── Network Graph ────────────────────────────────────────────────────
+        // ── Vis-Network Graph ──
         function initNetworkGraph() {
             const container = document.getElementById('network-graph');
             const nodes = new vis.DataSet([
-                {id: 1, label: 'AC00128', group: 'account'},
-                {id: 2, label: 'M001', group: 'merchant'},
-                {id: 3, label: 'D001', group: 'device'},
+                { id: 1, label: 'AC00128', group: 'account' },
+                { id: 2, label: 'M_Amazon', group: 'merchant' },
+                { id: 3, label: 'Dev_iPhone15', group: 'device' }
             ]);
             const edges = new vis.DataSet([
-                {from: 1, to: 2, label: '$125.00'},
-                {from: 1, to: 3, label: 'Login'},
+                { from: 1, to: 2, label: '$240.00' },
+                { from: 1, to: 3, label: 'Session' }
             ]);
             const options = {
-                nodes: { shape: 'dot', size: 16, font: { size: 12, color: '#343a40' } },
-                edges: { width: 1, arrows: { to: { enabled: true, scaleFactor: 0.5 } } },
-                groups: {
-                    account:  { color: '#007bff', shape: 'ellipse' },
-                    merchant: { color: '#28a745', shape: 'box' },
-                    device:   { color: '#ffc107', shape: 'diamond' }
+                nodes: {
+                    shape: 'dot',
+                    size: 15,
+                    font: { size: 11, color: '#f1f5f9', face: 'Plus Jakarta Sans' },
+                    borderWidth: 2
                 },
-                physics: { barnesHut: { springLength: 100 } }
+                edges: {
+                    width: 1.5,
+                    color: { color: 'rgba(255,255,255,0.2)', highlight: '#6366f1' },
+                    font: { size: 9, color: '#94a3b8', align: 'horizontal' },
+                    arrows: { to: { enabled: true, scaleFactor: 0.5 } }
+                },
+                groups: {
+                    account:  { color: { background: '#6366f1', border: '#818cf8' } },
+                    merchant: { color: { background: '#10b981', border: '#34d399' } },
+                    device:   { color: { background: '#f59e0b', border: '#fbbf24' } }
+                },
+                physics: {
+                    barnesHut: { springLength: 80, gravitationalConstant: -1800 }
+                }
             };
             network = new vis.Network(container, { nodes, edges }, options);
         }
 
-        function updateNetworkGraph(accountId, merchantId, deviceId, amount) {
+        function updateNetworkGraph(accId, merchId, devId, amount) {
+            if (!network) return;
             const nodes = network.body.data.nodes;
             const edges = network.body.data.edges;
-            const getOrAdd = (label, group) => {
-                let node = nodes.get().find(n => n.label === label);
-                if (!node) {
+
+            const getOrAdd = (lbl, grp) => {
+                let existing = nodes.get().find(n => n.label === lbl);
+                if (!existing) {
                     const id = nodes.length + Date.now() % 10000;
-                    nodes.add({ id, label, group });
-                    node = nodes.get().find(n => n.label === label);
+                    nodes.add({ id, label: lbl, group: grp });
+                    return nodes.get(id);
                 }
-                return node;
+                return existing;
             };
-            const acc  = getOrAdd(accountId,  'account');
-            const merch= getOrAdd(merchantId, 'merchant');
-            const dev  = getOrAdd(deviceId,   'device');
-            edges.add({ from: acc.id, to: merch.id, label: `$${parseFloat(amount).toFixed(2)}` });
-            edges.add({ from: acc.id, to: dev.id,   label: 'Login' });
-            network.fit({ nodes: [acc.id, merch.id, dev.id], animation: true });
+
+            const a = getOrAdd(accId, 'account');
+            const m = getOrAdd(merchId || 'M_General', 'merchant');
+            const d = getOrAdd(devId || 'D_Web', 'device');
+
+            edges.add({ from: a.id, to: m.id, label: `$${parseFloat(amount).toFixed(2)}` });
+            edges.add({ from: a.id, to: d.id, label: 'Auth' });
+
+            network.fit({ nodes: [a.id, m.id, d.id], animation: true });
         }
 
-        // ── Drift Status ─────────────────────────────────────────────────────
+        // ── Concept Drift ──
         async function checkDriftStatus() {
             try {
                 const res = await fetch('/api/drift/status');
                 const d = await res.json();
-                const el = document.getElementById('drift-status');
-                if (d.drift_detected) {
-                    el.innerHTML = `<span class="status-indicator status-danger"></span>
-                        <span>Concept Drift <span class="badge bg-danger">Detected (${d.drift_count})</span></span>`;
-                } else {
-                    el.innerHTML = `<span class="status-indicator status-active"></span><span>Concept Drift</span>`;
+                const driftText = document.getElementById('drift-text');
+                if (driftText) {
+                    driftText.textContent = d.drift_detected ? `Drift (${d.drift_count})` : 'Stable';
+                    driftText.className = d.drift_detected ? 'text-danger font-monospace' : 'text-white font-monospace';
                 }
             } catch(e) {}
         }
 
-        // ── Transaction Detail Modal ─────────────────────────────────────────
+        // ── Transaction Details Modal ──
         function showTransactionDetail(transaction) {
             currentDetailTxn = transaction;
-            const score = transaction.RiskScore || transaction.composite_score || 0;
+            const score = transaction.RiskScore || 0;
             const isBlocked = transaction.Status === 'BLOCKED' || transaction.IsFrozen;
-            let badgeClass = score > 0.7 ? 'bg-danger' : score > 0.4 ? 'bg-warning' : 'bg-success';
-            let riskLevel  = isBlocked ? 'BLOCKED / FROZEN' : score > 0.7 ? 'High' : score > 0.4 ? 'Medium' : 'Low';
-            let alertClass = isBlocked ? 'alert-danger' : score > 0.7 ? 'alert-danger' : score > 0.4 ? 'alert-warning' : 'alert-success';
 
             const freezeBtn = document.getElementById('detail-freeze-btn');
             if (freezeBtn) {
                 if (isBlocked) {
-                    freezeBtn.className = 'btn btn-success';
+                    freezeBtn.className = 'btn btn-success btn-sm';
                     freezeBtn.innerHTML = '<i class="bi bi-unlock-fill me-1"></i> Unfreeze Account';
                 } else {
-                    freezeBtn.className = 'btn btn-danger';
+                    freezeBtn.className = 'btn btn-danger btn-sm';
                     freezeBtn.innerHTML = '<i class="bi bi-shield-slash-fill me-1"></i> Freeze Account';
                 }
             }
 
-            document.getElementById('transaction-detail').innerHTML = `
-                <div class="alert ${alertClass}">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">Status: ${riskLevel}</h4>
-                        <span class="badge ${badgeClass}">${score.toFixed(3)}</span>
+            const detailContainer = document.getElementById('transaction-detail');
+            detailContainer.innerHTML = `
+                <div class="p-3 mb-3 rounded d-flex justify-content-between align-items-center" 
+                     style="background: ${isBlocked ? 'rgba(239, 68, 68, 0.2)' : score > 0.7 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)'}; 
+                            border: 1px solid ${isBlocked || score > 0.7 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'};">
+                    <div>
+                        <span class="text-muted small text-uppercase">Assessment Outcome</span>
+                        <h4 class="mb-0 text-white font-monospace">${isBlocked ? 'ACCOUNT INTERCEPTED (BLOCKED)' : score > 0.7 ? 'HIGH-RISK ANOMALY' : 'NORMAL TRANSACTION'}</h4>
                     </div>
+                    <span class="badge-pill ${score > 0.7 ? 'badge-danger' : 'badge-safe'}" style="font-size: 1.1rem;">${score.toFixed(3)}</span>
                 </div>
-                <div class="row mt-2">
+
+                <div class="row g-3">
                     <div class="col-md-6">
-                        <table class="table table-sm">
-                            <tr><th>ID:</th><td>${transaction.TransactionID || '—'}</td></tr>
-                            <tr><th>Account:</th><td><code>${transaction.AccountID || '—'}</code></td></tr>
-                            <tr><th>Amount:</th><td>$${parseFloat(transaction.TransactionAmount || 0).toFixed(2)}</td></tr>
-                            <tr><th>Type:</th><td>${transaction.TransactionType || '—'}</td></tr>
-                            <tr><th>Channel:</th><td>${transaction.Channel || '—'}</td></tr>
+                        <table class="custom-table">
+                            <tr><th style="background:transparent;">Txn ID</th><td class="font-monospace">${transaction.TransactionID || '—'}</td></tr>
+                            <tr><th style="background:transparent;">Account</th><td><span class="code-acc">${transaction.AccountID || '—'}</span></td></tr>
+                            <tr><th style="background:transparent;">Amount</th><td class="fw-bold text-white font-monospace">$${parseFloat(transaction.TransactionAmount || 0).toFixed(2)}</td></tr>
+                            <tr><th style="background:transparent;">Channel</th><td>${transaction.Channel || '—'}</td></tr>
                         </table>
                     </div>
                     <div class="col-md-6">
-                        <table class="table table-sm">
-                            <tr><th>Risk Score:</th><td><span class="badge ${badgeClass}">${score.toFixed(3)}</span></td></tr>
-                            <tr><th>Status:</th><td><strong class="${isBlocked ? 'text-danger' : ''}">${transaction.Status || '—'}</strong></td></tr>
-                            <tr><th>Location:</th><td>${transaction.Location || '—'}</td></tr>
-                            <tr><th>Merchant:</th><td>${transaction.MerchantID || '—'}</td></tr>
-                            <tr><th>Time:</th><td>${transaction.Timestamp || '—'}</td></tr>
+                        <table class="custom-table">
+                            <tr><th style="background:transparent;">Status</th><td><strong class="${isBlocked ? 'text-danger' : 'text-success'}">${transaction.Status || 'Active'}</strong></td></tr>
+                            <tr><th style="background:transparent;">Location</th><td>${transaction.Location || '—'}</td></tr>
+                            <tr><th style="background:transparent;">Merchant</th><td>${transaction.MerchantID || '—'}</td></tr>
+                            <tr><th style="background:transparent;">Time</th><td class="font-monospace small text-muted">${transaction.Timestamp || '—'}</td></tr>
                         </table>
                     </div>
                 </div>
-                <p class="mt-2 text-muted"><strong>Top Risk Feature:</strong> ${transaction.TopFeature || '—'}</p>
-                <div class="row text-center mt-2">
-                    <div class="col"><small class="text-muted">XGBoost</small><br><strong>${(transaction.XGBProb||0).toFixed(3)}</strong></div>
-                    <div class="col"><small class="text-muted">Isolation Forest</small><br><strong>${(transaction.IsoScore||0).toFixed(3)}</strong></div>
-                    <div class="col"><small class="text-muted">GNN</small><br><strong>${(transaction.GNNProb||0).toFixed(3)}</strong></div>
-                </div>`;
+
+                <div class="mt-3 p-3 rounded" style="background: #0d121f; border: 1px solid var(--border-subtle);">
+                    <span class="text-muted small text-uppercase d-block mb-2">Cognitive AI Sub-Model Scores</span>
+                    <div class="row text-center g-2 font-monospace">
+                        <div class="col-4 p-2 rounded" style="background: rgba(255,255,255,0.03);">
+                            <small class="text-muted d-block">XGBoost Prob</small>
+                            <span class="text-info fw-bold">${(transaction.XGBProb||0).toFixed(3)}</span>
+                        </div>
+                        <div class="col-4 p-2 rounded" style="background: rgba(255,255,255,0.03);">
+                            <small class="text-muted d-block">Isolation Forest</small>
+                            <span class="text-warning fw-bold">${(transaction.IsoScore||0).toFixed(3)}</span>
+                        </div>
+                        <div class="col-4 p-2 rounded" style="background: rgba(255,255,255,0.03);">
+                            <small class="text-muted d-block">GNN Anomaly</small>
+                            <span class="text-danger fw-bold">${(transaction.GNNProb||0).toFixed(3)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
             txnModal.show();
         }
 
@@ -986,25 +1461,54 @@
                     customer_info: {
                         name: 'Account Holder ' + currentDetailTxn.AccountID,
                         account_id: currentDetailTxn.AccountID,
-                        risk_score: currentDetailTxn.RiskScore || 0.8
+                        risk_score: currentDetailTxn.RiskScore || 0.85
                     }
                 };
-                const blob = await (await fetch('/api/reports/sar', {
+                const res = await fetch('/api/reports/sar', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(reportData)
-                })).blob();
+                });
+                const blob = await res.blob();
                 const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url;
+                const a = document.createElement('a');
+                a.href = url;
                 a.download = `SAR_${currentDetailTxn.AccountID}_${new Date().toISOString().split('T')[0]}.pdf`;
-                document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
             } catch(err) {
-                alert('SAR report generation failed: ' + err.message);
+                alert('SAR generation error: ' + err.message);
             }
         }
 
-        // ── Transaction Analysis Form ─────────────────────────────────────────
+        // ── Form Submissions & Click Handlers ──
         function setupEventListeners() {
+            document.getElementById('refresh-btn').addEventListener('click', e => {
+                e.preventDefault();
+                fetchAndRender();
+            });
+
+            document.getElementById('generate-report-btn').addEventListener('click', async e => {
+                e.preventDefault();
+                try {
+                    const txns = await (await fetch('/api/live-transactions?limit=25')).json();
+                    const reportData = {
+                        transactions: txns.filter(t => t.RiskScore > 0.4),
+                        customer_info: { name: 'Batch Fraud Audit', account_id: 'SYSTEM_AUDIT', risk_score: 0.78 }
+                    };
+                    const blob = await (await fetch('/api/reports/sar', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(reportData)
+                    })).blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url;
+                    a.download = `SAR_Batch_Audit_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
+                } catch(err) { alert('Report generation error: ' + err.message); }
+            });
+
             document.getElementById('transaction-form').addEventListener('submit', async function (e) {
                 e.preventDefault();
                 const now  = new Date().toISOString().replace('T',' ').substring(0,19);
@@ -1026,7 +1530,7 @@
                 };
 
                 const resultDiv = document.getElementById('analysis-result');
-                resultDiv.innerHTML = '<div class="text-center mt-3"><div class="spinner-border text-primary"></div><p class="mt-2">Analyzing...</p></div>';
+                resultDiv.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div><p class="small text-muted mt-2">Computing multi-model tensor inference...</p></div>';
 
                 try {
                     const res = await fetch('/api/analyze', {
@@ -1037,76 +1541,29 @@
                     const data = await res.json();
                     const score = data.composite_score || 0;
                     const isBlocked = data.status === 'BLOCKED' || data.is_frozen;
-                    const riskLevel  = isBlocked ? 'BLOCKED (Account Frozen)' : score > 0.7 ? 'High' : score > 0.4 ? 'Medium' : 'Low';
-                    const alertClass = isBlocked ? 'alert-danger' : score > 0.7 ? 'alert-danger' : score > 0.4 ? 'alert-warning' : 'alert-success';
-                    const badgeColor = isBlocked ? 'danger' : score > 0.7 ? 'danger' : score > 0.4 ? 'warning' : 'success';
 
-                    let explanationHTML = `
-                        <div class="alert ${alertClass} mt-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Risk Assessment: ${riskLevel}</h5>
-                                <span class="badge bg-${badgeColor}">${score.toFixed(3)}</span>
+                    resultDiv.innerHTML = `
+                        <div class="p-3 mt-3 rounded" style="background: ${isBlocked ? 'rgba(239, 68, 68, 0.2)' : score > 0.7 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)'}; border: 1px solid ${isBlocked || score > 0.7 ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'};">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold ${isBlocked || score > 0.7 ? 'text-danger' : 'text-success'}">
+                                    ${isBlocked ? 'ACCOUNT BLOCKED' : score > 0.7 ? 'HIGH RISK DETECTED' : 'CLEARED TRANSACTION'}
+                                </span>
+                                <span class="badge-pill ${score > 0.7 ? 'badge-danger' : 'badge-safe'}">${score.toFixed(3)}</span>
                             </div>
-                            <hr>
-                            <div class="row">
-                                <div class="col-6"><strong>XGBoost:</strong> ${(data.xgboost_probability||0).toFixed(3)}</div>
-                                <div class="col-6"><strong>GNN:</strong> ${(data.gnn_probability||0).toFixed(3)}</div>
-                                <div class="col-6"><strong>Isolation Forest:</strong> ${(data.isolation_forest_score||0).toFixed(3)}</div>
-                                <div class="col-6"><strong>Customer Risk:</strong> ${(data.customer_risk_score||0).toFixed(3)}</div>
+                            <div class="row small text-muted font-monospace g-1">
+                                <div class="col-6">XGB: ${(data.xgboost_probability||0).toFixed(3)}</div>
+                                <div class="col-6">GNN: ${(data.gnn_probability||0).toFixed(3)}</div>
+                                <div class="col-6">IsoForest: ${(data.isolation_forest_score||0).toFixed(3)}</div>
+                                <div class="col-6">Customer: ${(data.customer_risk_score||0).toFixed(3)}</div>
                             </div>
                         </div>
-                        <h6>SHAP Feature Importance</h6>`;
-
-                    (data.explanation || []).forEach(f => {
-                        const w = Math.min(100, Math.abs(f.shap_value) * 200);
-                        const cls = f.shap_value > 0 ? 'impact-positive' : 'impact-negative';
-                        explanationHTML += `
-                            <div class="feature-impact mb-1">
-                                <span style="min-width:140px;display:inline-block">${f.feature}</span>
-                                <div class="feature-bar ${cls}" style="width:${w}%;display:inline-block"></div>
-                                <small class="text-muted ms-2">${f.shap_value.toFixed(3)}</small>
-                            </div>`;
-                    });
-
-                    resultDiv.innerHTML = explanationHTML;
+                    `;
                     updateNetworkGraph(payload.AccountID, payload.MerchantID, payload.DeviceID, payload.TransactionAmount);
                 } catch(err) {
-                    resultDiv.innerHTML = `<div class="alert alert-danger mt-3">Error: ${err.message}</div>`;
+                    resultDiv.innerHTML = `<div class="alert alert-danger mt-3 small">Inference failed: ${err.message}</div>`;
                 }
-            });
-
-            document.getElementById('refresh-btn').addEventListener('click', e => {
-                e.preventDefault();
-                fetchAndRender();
-            });
-
-            document.getElementById('generate-report-btn').addEventListener('click', async e => {
-                e.preventDefault();
-                try {
-                    const txns = await (await fetch('/api/live-transactions?limit=20')).json();
-                    const reportData = {
-                        transactions: txns.filter(t => t.RiskScore > 0.5),
-                        customer_info: { name: 'Simulated Customer', account_id: 'SIMULATED', risk_score: 0.72 }
-                    };
-                    const blob = await (await fetch('/api/reports/sar', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(reportData)
-                    })).blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url;
-                    a.download = `SAR_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-                    document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
-                } catch(err) { alert('Report generation failed: ' + err.message); }
             });
         }
     </script>
-    <style>
-        @keyframes rowFlash {
-            0%   { background-color: rgba(0,200,100,0.3); }
-            100% { background-color: transparent; }
-        }
-    </style>
-
 </body>
 </html>
