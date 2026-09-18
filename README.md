@@ -1,8 +1,8 @@
-# FraudShield AI: Real-Time Transaction Fraud Detection System
+# FraudGuard AI: Real-Time Transaction Fraud Detection System
 
-FraudShield AI is an enterprise-grade, real-time transaction surveillance and fraud detection platform. It combines supervised gradient boosting, unsupervised anomaly detection, Graph Neural Networks (GNN), and local SHAP explainability into a multi-layered scoring pipeline. 
+FraudGuard AI is an enterprise-grade, real-time transaction surveillance and fraud detection platform. It combines supervised gradient boosting, unsupervised anomaly detection, Graph Neural Networks (GNN), and local SHAP explainability into a multi-layered scoring pipeline. 
 
-Instead of relying on rigid rule-based systems or opaque black-box models, FraudShield AI computes a composite risk score for every incoming transaction, highlights the exact behavioral drivers behind each decision, and provides security analysts with an interactive live dashboard for threat monitoring and incident response.
+Instead of relying on rigid rule-based systems or opaque black-box models, FraudGuard AI computes a composite risk score for every incoming transaction, highlights the exact behavioral drivers behind each decision, and provides security analysts with an interactive live dashboard for threat monitoring and incident response.
 
 ---
 

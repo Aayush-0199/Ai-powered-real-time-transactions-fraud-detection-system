@@ -1,11 +1,49 @@
+# Virtual Environment
 venv/
-**/__pycache__/
-__pycache__/
-*.pyc
-mlruns/
+env/
 .env
+.venv/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+mlruns/
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Trained model artifacts (large binary files)
+trained_models/*.pkl
+graph_models/*.pt
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
 .DS_Store
-reports/
+Thumbs.db
+
+# Logs
 *.log
+logs/
+*_log.txt
 app_log.txt
 sim_log.txt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Reports (generated PDFs)
+reporting/generated/
+*.pdf
+
+# Data (large CSVs - add to git with git-lfs or commit separately)
+# data/*.csv  # Keeping CSV in repo for demo purposes

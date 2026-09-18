@@ -1,10 +1,10 @@
-# FraudShield AI — Render Deployment Configuration
+# FraudGuard AI — Render Deployment Configuration
 # Single free-tier web service that runs Flask + simulator together.
 # https://render.com/docs/blueprint-spec
 
 services:
   - type: web
-    name: fraudshield-api
+    name: fraudguard-api
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free

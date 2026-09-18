@@ -1,1733 +1,3158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FraudShield AI — Real-Time Transaction Intelligence</title>
-    <!-- Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Vis Network for Entity Graph -->
-    <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.2/dist/vis-network.min.js"></script>
-    <!-- Chart.js for Distribution & Velocity -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FraudGuard AI — Enterprise Fraud Detection Platform</title>
+  <meta name="description" content="Real-time AI-powered financial fraud detection with GNN, XGBoost ensemble scoring, SHAP explainability and FinCEN SAR compliance." />
 
-    <style>
-        :root {
-            --bg-base: #0a0e17;
-            --bg-surface: #111726;
-            --bg-card: #151d30;
-            --bg-card-hover: #19233a;
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-focus: rgba(99, 102, 241, 0.5);
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --accent-primary: #6366f1;
-            --accent-cyan: #06b6d4;
-            --risk-danger: #ef4444;
-            --risk-warning: #f59e0b;
-            --risk-safe: #10b981;
-            --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
-        html, body {
-            height: 100%;
-            width: 100%;
-            background-color: var(--bg-base);
-            color: var(--text-primary);
-            font-family: var(--font-main);
-            overflow-x: hidden;
-        }
+  <!-- Vis-Network -->
+  <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/vis-network.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/dist/vis-network.min.css" rel="stylesheet" />
 
-        /* ── APP SHELL (Rigid 2-Column Desktop Architecture) ── */
-        .app-shell {
-            display: grid;
-            grid-template-columns: 260px minmax(0, 1fr);
-            min-height: 100vh;
-            width: 100vw;
-            overflow-x: hidden;
-        }
+  <style>
+    /* ══════════════════════════════════════════════════════
+       Design Tokens & Reset
+    ══════════════════════════════════════════════════════ */
+    :root {
+      --sidebar-from: #090e1a;
+      --sidebar-to:   #0d1527;
+      --sidebar-w:    260px;
+      --accent:       #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-light: #dbeafe;
+      --bg:           #f0f4f8;
+      --card:         #ffffff;
+      --border:       #e2e8f0;
+      --text-primary: #0f172a;
+      --text-secondary:#64748b;
+      --text-muted:   #94a3b8;
+      --red:          #ef4444;
+      --red-bg:       #fef2f2;
+      --amber:        #f59e0b;
+      --amber-bg:     #fffbeb;
+      --green:        #10b981;
+      --green-bg:     #f0fdf4;
+      --navy:         #0d1527;
+      --radius:       12px;
+      --radius-sm:    8px;
+      --shadow:       0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.06);
+      --shadow-lg:    0 8px 32px rgba(0,0,0,.12);
+      --transition:   0.2s cubic-bezier(0.4,0,0.2,1);
+    }
 
-        /* ── SIDEBAR ── */
-        .app-sidebar {
-            background: linear-gradient(180deg, #0d1322 0%, #090d17 100%);
-            border-right: 1px solid var(--border-subtle);
-            padding: 24px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
-        }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .brand-logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 4px 8px;
-            text-decoration: none;
-        }
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.25rem;
-            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
-        }
-        .brand-text h1 {
-            font-size: 1.15rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: #fff;
-            margin: 0;
-            line-height: 1.2;
-        }
-        .brand-text span {
-            font-size: 0.72rem;
-            color: var(--accent-cyan);
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
+    html { scroll-behavior: smooth; }
 
-        .nav-section-label {
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-muted);
-            font-weight: 700;
-            padding: 0 8px;
-            margin-bottom: 8px;
-        }
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
 
-        .side-nav {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 0;
-            margin: 0;
-        }
-        .side-nav a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.84rem;
-            font-weight: 600;
-            transition: all 0.15s ease;
-        }
-        .side-nav a:hover, .side-nav a.active {
-            background-color: rgba(99, 102, 241, 0.12);
-            color: #fff;
-        }
-        .side-nav a.active {
-            border-left: 3px solid var(--accent-primary);
-            color: #fff;
-        }
+    /* ══════════════════════════════════════════════════════
+       Layout Shell
+    ══════════════════════════════════════════════════════ */
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+    }
 
-        .sidebar-widget {
-            margin-top: auto;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-subtle);
-            border-radius: 10px;
-            padding: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .sidebar-widget-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .engine-status-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
+    /* ══════════════════════════════════════════════════════
+       Sidebar
+    ══════════════════════════════════════════════════════ */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: linear-gradient(160deg, var(--sidebar-from) 0%, var(--sidebar-to) 100%);
+      border-right: 1px solid rgba(255,255,255,.05);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      overflow-y: auto;
+    }
 
-        .pulse-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-        }
-        .dot-green { background: #10b981; box-shadow: 0 0 8px #10b981; }
-        .dot-yellow { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
-        .dot-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+    .sidebar-brand {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
 
-        /* ── MAIN CONTENT AREA ── */
-        .app-main {
-            padding: 24px 32px 48px;
-            background-color: var(--bg-base);
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 2px;
+    }
 
-        /* ── TOP ACTION HEADER ── */
-        .top-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .header-title h2 {
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: #fff;
-            margin: 0;
-        }
-        .header-title p {
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            margin: 2px 0 0;
-        }
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(99,102,241,.4);
+    }
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+    .brand-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.3px;
+    }
 
-        .btn-modern {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            border: 1px solid var(--border-subtle);
-            background: var(--bg-surface);
-            color: var(--text-primary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-        }
-        .btn-modern:hover {
-            background: var(--bg-card-hover);
-            color: #fff;
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-        .btn-modern-primary {
-            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            border-color: #6366f1;
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-        }
-        .btn-modern-primary:hover {
-            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
-            color: #fff;
-        }
-        .btn-modern-danger {
-            background: rgba(239, 68, 68, 0.15);
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-        }
-        .btn-modern-danger:hover {
-            background: rgba(239, 68, 68, 0.25);
-            color: #fff;
-        }
+    .brand-sub {
+      font-size: 10.5px;
+      color: rgba(255,255,255,.4);
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
 
-        /* ── METRIC STAT CARDS (Strict 4-Column Grid) ── */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-            min-width: 0;
-        }
-        .stat-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 18px 20px;
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-        }
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--accent-primary);
-        }
-        .stat-card.risk-danger::before { background: var(--risk-danger); }
-        .stat-card.risk-warning::before { background: var(--risk-warning); }
-        .stat-card.risk-safe::before { background: var(--risk-safe); }
-        .stat-card.risk-cyan::before { background: var(--accent-cyan); }
+    /* Sidebar Nav */
+    .sidebar-section {
+      padding: 16px 12px 8px;
+    }
 
-        .stat-content {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .stat-label {
-            font-size: 0.76rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .stat-value {
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #fff;
-            line-height: 1.1;
-            font-family: var(--font-mono);
-        }
-        .stat-subtext {
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-top: 2px;
-            color: var(--text-secondary);
-        }
-        .stat-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            color: var(--text-secondary);
-        }
+    .sidebar-section-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.25);
+      padding: 0 8px;
+      margin-bottom: 6px;
+    }
 
-        /* ── SECTION 1: TRANSACTIONS & DEDICATED THREAT ALERTS FEED ── */
-        .workspace-grid-split {
-            display: grid;
-            grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-            gap: 20px;
-            min-width: 0;
-            align-items: start;
-        }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: rgba(255,255,255,.55);
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: var(--transition);
+      margin-bottom: 2px;
+      border: 1px solid transparent;
+      user-select: none;
+    }
 
-        /* ── CARDS BASE ── */
-        .panel-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            border-radius: 14px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            min-width: 0;
-        }
-        .panel-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .panel-header h3 {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #fff;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .panel-body {
-            padding: 18px 20px;
-            min-width: 0;
-        }
+    .nav-item:hover {
+      background: rgba(255,255,255,.07);
+      color: rgba(255,255,255,.9);
+    }
 
-        /* ── TRANSACTIONS TABLE ── */
-        .table-container {
-            height: 480px;
-            max-height: 480px;
-            overflow-y: auto;
-            min-width: 0;
-        }
-        .custom-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            margin: 0;
-        }
-        .custom-table th {
-            position: sticky;
-            top: 0;
-            background: #151c2c;
-            color: var(--text-muted);
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            letter-spacing: 0.05em;
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--border-subtle);
-            z-index: 2;
-        }
-        .custom-table td {
-            padding: 11px 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            vertical-align: middle;
-            white-space: nowrap;
-        }
-        .custom-table tr:hover td {
-            background-color: rgba(255, 255, 255, 0.03);
-            color: #fff;
-            cursor: pointer;
-        }
-        .code-acc {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: #93c5fd;
-            background: rgba(147, 197, 253, 0.08);
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(59,130,246,.25), rgba(99,102,241,.15));
+      color: #fff;
+      border-color: rgba(59,130,246,.3);
+    }
 
-        /* Risk Pill Badges */
-        .badge-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            font-family: var(--font-mono);
-        }
-        .badge-safe { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-        .badge-medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-        .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-        .badge-blocked { background: #ef4444; color: #fff; font-weight: 800; animation: blockedBlink 1.5s infinite; }
+    .nav-item.active .nav-icon { opacity: 1; }
 
-        @keyframes blockedBlink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
+    .nav-icon { font-size: 16px; flex-shrink: 0; opacity: .7; }
+    .nav-badge {
+      margin-left: auto;
+      background: rgba(239,68,68,.85);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
 
-        /* ── DEDICATED IN-PAGE THREAT ALERTS SECTION (No Floating Popups) ── */
-        .alerts-feed-container {
-            height: 480px;
-            max-height: 480px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding-right: 4px;
-        }
-        .threat-alert-card {
-            background: #181c2b;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-left: 4px solid var(--risk-danger);
-            border-radius: 10px;
-            padding: 12px 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            transition: all 0.2s ease;
-            animation: alertSlideIn 0.3s ease-out;
-        }
-        .threat-alert-card.threat-med {
-            border-left-color: var(--risk-warning);
-        }
-        .threat-alert-card:hover {
-            background: #1c2235;
-            border-color: rgba(255, 255, 255, 0.15);
-        }
+    /* Sidebar Footer */
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 12px 16px 18px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
 
-        @keyframes alertSlideIn {
-            from { opacity: 0; transform: translateY(-8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    .sidebar-footer-info {
+      font-size: 10.5px;
+      color: rgba(255,255,255,.3);
+      line-height: 1.6;
+    }
 
-        /* ── SECTION 2: GRAPH & EVALUATION (Strict 2-Column Grid) ── */
-        .workspace-grid-half {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 20px;
-            min-width: 0;
-            align-items: start;
-        }
+    /* ══════════════════════════════════════════════════════
+       Main Content
+    ══════════════════════════════════════════════════════ */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-        /* ── LOCKED CHART CONTAINERS (PHYSICALLY IMMUNE TO DOWNWARD EXPANSION) ── */
-        .chart-container-locked {
-            position: relative;
-            height: 220px;
-            max-height: 220px;
-            min-height: 220px;
-            width: 100%;
-            overflow: hidden;
-        }
-        .chart-container-locked canvas {
-            max-height: 220px !important;
-            height: 220px !important;
-            display: block;
-            width: 100% !important;
-        }
+    /* ── Header Bar ── */
+    .header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
 
-        /* ── VIS-NETWORK GRAPH ── */
-        #network-graph {
-            width: 100%;
-            height: 380px;
-            min-height: 380px;
-            max-height: 380px;
-            border-radius: 8px;
-            background: #0d121f;
-            border: 1px solid var(--border-subtle);
-        }
+    .header-breadcrumb {
+      flex: 1;
+    }
 
-        /* ── FORM ELEMENTS ── */
-        .form-control-modern, .form-select-modern {
-            width: 100%;
-            background: #0d121f;
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 7px 12px;
-            font-size: 0.82rem;
-            color: #fff;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .form-control-modern:focus, .form-select-modern:focus {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-            color: #fff;
-            background: #0d121f;
-        }
-        .form-label-modern {
-            font-size: 0.74rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-            display: block;
-        }
+    .breadcrumb-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
 
-        /* SHAP Feature Bars */
-        .feature-impact {
-            display: flex;
-            align-items: center;
-            font-size: 0.75rem;
-            margin-bottom: 4px;
-        }
-        .feature-bar {
-            height: 8px;
-            border-radius: 4px;
-            margin: 0 8px;
-            min-width: 4px;
-        }
-        .impact-positive { background: #ef4444; }
-        .impact-negative { background: #10b981; }
+    .breadcrumb-desc {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
 
-        /* Custom Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+    /* Live beacon */
+    .live-beacon {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--green);
+      background: var(--green-bg);
+      border: 1px solid rgba(16,185,129,.2);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
 
-        /* Dark Modals */
-        .modal-content {
-            background-color: #111726;
-            border: 1px solid var(--border-subtle);
-            color: #f1f5f9;
-            border-radius: 14px;
-        }
-        .modal-header {
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .modal-footer {
-            border-top: 1px solid var(--border-subtle);
-        }
-        .btn-close-white {
-            filter: invert(1) grayscale(100%) brightness(200%);
-        }
+    .beacon-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-beacon 1.8s ease-in-out infinite;
+    }
 
-        /* Responsive Breakpoints */
-        @media (max-width: 1200px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .workspace-grid-split { grid-template-columns: 1fr; }
-            .workspace-grid-half { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 900px) {
-            .app-shell { grid-template-columns: 1fr; }
-            .app-sidebar { display: none; }
-            .app-main { padding: 16px; }
-        }
-    </style>
+    @keyframes pulse-beacon {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.5); opacity: .6; }
+    }
+
+    /* Clock */
+    .header-clock {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Header buttons */
+    .header-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-primary);
+    }
+
+    .header-btn:hover {
+      background: var(--bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .frozen-badge {
+      background: #eff6ff;
+      color: #3b82f6;
+      border: 1px solid #bfdbfe;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Content Area
+    ══════════════════════════════════════════════════════ */
+    .content {
+      flex: 1;
+      padding: 24px;
+    }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ══════════════════════════════════════════════════════
+       Cards
+    ══════════════════════════════════════════════════════ */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       KPI Cards
+    ══════════════════════════════════════════════════════ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .kpi-card.kpi-blue::before   { background: linear-gradient(90deg,#3b82f6,#6366f1); }
+    .kpi-card.kpi-red::before    { background: linear-gradient(90deg,#ef4444,#f97316); }
+    .kpi-card.kpi-amber::before  { background: linear-gradient(90deg,#f59e0b,#f97316); }
+    .kpi-card.kpi-purple::before { background: linear-gradient(90deg,#8b5cf6,#6366f1); }
+
+    .kpi-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .kpi-blue .kpi-icon   { background: #eff6ff; }
+    .kpi-red .kpi-icon    { background: #fef2f2; }
+    .kpi-amber .kpi-icon  { background: #fffbeb; }
+    .kpi-purple .kpi-icon { background: #f5f3ff; }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1;
+      margin-bottom: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-blue .kpi-value   { color: #3b82f6; }
+    .kpi-red .kpi-value    { color: #ef4444; }
+    .kpi-amber .kpi-value  { color: #f59e0b; }
+    .kpi-purple .kpi-value { color: #8b5cf6; }
+
+    .kpi-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .kpi-delta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Tables
+    ══════════════════════════════════════════════════════ */
+    .table-wrap {
+      max-height: 480px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--card);
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+      position: relative;
+    }
+
+    .table-wrap::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .table-wrap::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 4px;
+    }
+    .table-wrap::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc;
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      z-index: 3;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .table-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 6px 4px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pagination-select {
+      width: auto !important;
+      padding: 4px 8px !important;
+      font-size: 12px !important;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    .btn-page {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: var(--transition);
+    }
+
+    .btn-page:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-page:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .page-indicator {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 0 4px;
+    }
+
+    @keyframes row-enter {
+      0% { background-color: rgba(59, 130, 246, 0.18); }
+      100% { background-color: transparent; }
+    }
+    .row-new {
+      animation: row-enter 1.2s ease-out;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background var(--transition);
+    }
+
+    tbody tr:hover { background: #f8fafc; cursor: pointer; }
+    tbody tr:last-child { border-bottom: none; }
+
+    td {
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Badges / Pills
+    ══════════════════════════════════════════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+
+    .badge-red    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-amber  { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .badge-green  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .badge-blue   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-purple { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .badge-gray   { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+    .badge-frozen { background: #eff6ff; color: #1d4ed8; border: 1px solid #93c5fd; }
+
+    /* Risk Score Pill */
+    .risk-pill {
+      display: inline-flex;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .risk-critical { background: #fef2f2; color: #dc2626; }
+    .risk-high     { background: #fffbeb; color: #d97706; }
+    .risk-medium   { background: #fefce8; color: #ca8a04; }
+    .risk-low      { background: #f0fdf4; color: #16a34a; }
+
+    /* ══════════════════════════════════════════════════════
+       Buttons
+    ══════════════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: var(--transition);
+      text-decoration: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,.3); }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+    }
+    .btn-danger:hover  { background: #dc2626; transform: translateY(-1px); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    .btn-outline:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+
+    .btn-sm {
+      padding: 5px 11px;
+      font-size: 12px;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .btn-ghost:hover { background: var(--bg); color: var(--text-primary); }
+
+    /* ══════════════════════════════════════════════════════
+       Filter Chips
+    ══════════════════════════════════════════════════════ */
+    .filter-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Inputs
+    ══════════════════════════════════════════════════════ */
+    input[type="text"], input[type="number"], select, textarea {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 13px;
+      padding: 9px 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--card);
+      color: var(--text-primary);
+      outline: none;
+      transition: var(--transition);
+      width: 100%;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+
+    label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .form-group { margin-bottom: 14px; }
+
+    .form-row {
+      display: grid;
+      gap: 14px;
+    }
+
+    .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    /* ══════════════════════════════════════════════════════
+       Grid Layouts
+    ══════════════════════════════════════════════════════ */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+    /* ══════════════════════════════════════════════════════
+       Toast Notification (Glassmorphic)
+    ══════════════════════════════════════════════════════ */
+    #toast-container {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255,255,255,.6);
+      border-left: 3px solid var(--red);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(239,68,68,.15);
+      padding: 14px 16px;
+      width: 340px;
+      pointer-events: all;
+      animation: toast-slide 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes toast-slide {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);   opacity: 1; }
+    }
+
+    .toast.toast-exit {
+      animation: toast-exit 0.3s ease forwards;
+    }
+
+    @keyframes toast-exit {
+      to { transform: translateX(120%); opacity: 0; }
+    }
+
+    .toast-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .toast-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toast-close {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; color: var(--text-muted); line-height: 1;
+    }
+
+    .toast-body { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+    .toast-footer { display: flex; gap: 8px; align-items: center; }
+
+    /* ══════════════════════════════════════════════════════
+       Modal
+    ══════════════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(9,14,26,.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.25);
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modal-in .2s ease;
+    }
+
+    @keyframes modal-in {
+      from { transform: scale(.96); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .modal-body { padding: 20px 24px; }
+    .modal-footer {
+      padding: 14px 24px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SHAP Bar Chart (Custom)
+    ══════════════════════════════════════════════════════ */
+    .shap-bar-wrap { margin-top: 10px; }
+
+    .shap-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .shap-feat {
+      width: 160px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shap-bar-track {
+      flex: 1;
+      height: 10px;
+      background: #f1f5f9;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .shap-bar-fill {
+      height: 100%;
+      border-radius: 10px;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .shap-positive { background: linear-gradient(90deg, #ef4444, #f97316); }
+    .shap-negative { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+
+    .shap-val {
+      width: 55px;
+      font-size: 11px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Graph View
+    ══════════════════════════════════════════════════════ */
+    #graph-canvas {
+      width: 100%;
+      height: 520px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: #f8fafc;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Model Pipeline Cards
+    ══════════════════════════════════════════════════════ */
+    .model-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .model-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+    .model-status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-active   { background: var(--green); animation: pulse-beacon 2s infinite; }
+    .dot-inactive { background: var(--text-muted); }
+    .dot-error    { background: var(--red); }
+
+    /* ══════════════════════════════════════════════════════
+       Profile Cards
+    ══════════════════════════════════════════════════════ */
+    .profile-metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .profile-metric:last-child { border-bottom: none; }
+
+    .profile-metric-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .profile-metric-value {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Progress / Spinner
+    ══════════════════════════════════════════════════════ */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(59,130,246,.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .progress-bar {
+      height: 6px;
+      background: #f1f5f9;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #6366f1);
+      border-radius: 10px;
+      transition: width 0.4s ease;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Compliance Checklist
+    ══════════════════════════════════════════════════════ */
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .check-item:last-child { border-bottom: none; }
+
+    .check-icon {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .check-pass { background: var(--green-bg); color: var(--green); }
+    .check-warn { background: var(--amber-bg); color: var(--amber); }
+
+    /* ══════════════════════════════════════════════════════
+       Empty State
+    ══════════════════════════════════════════════════════ */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon { font-size: 40px; margin-bottom: 10px; }
+    .empty-state-msg { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+    .empty-state-sub { font-size: 12.5px; margin-top: 4px; }
+
+    /* ══════════════════════════════════════════════════════
+       Search Bar
+    ══════════════════════════════════════════════════════ */
+    .search-bar {
+      position: relative;
+    }
+
+    .search-bar input {
+      padding-left: 36px;
+    }
+
+    .search-bar::before {
+      content: '🔍';
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Divider
+    ══════════════════════════════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Utility Classes
+    ══════════════════════════════════════════════════════ */
+    .flex   { display: flex; }
+    .flex-1 { flex: 1; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-8  { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .gap-16 { gap: 16px; }
+    .mb-12  { margin-bottom: 12px; }
+    .mb-16  { margin-bottom: 16px; }
+    .mb-20  { margin-bottom: 20px; }
+    .mt-12  { margin-top: 12px; }
+    .mt-16  { margin-top: 16px; }
+    .text-sm    { font-size: 12.5px; }
+    .text-xs    { font-size: 11px; }
+    .text-muted { color: var(--text-muted); }
+    .text-secondary { color: var(--text-secondary); }
+    .font-bold  { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+    .w-full { width: 100%; }
+
+    /* ══════════════════════════════════════════════════════
+       Scrollbar
+    ══════════════════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* ══════════════════════════════════════════════════════
+       Frozen Row Highlight
+    ══════════════════════════════════════════════════════ */
+    tr.row-blocked { background: #fef2f2 !important; }
+    tr.row-blocked:hover { background: #fee2e2 !important; }
+
+    /* ══════════════════════════════════════════════════════
+       Pause Button
+    ══════════════════════════════════════════════════════ */
+    .pause-btn-active {
+      background: var(--amber-bg) !important;
+      color: var(--amber) !important;
+      border-color: var(--amber) !important;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       Drift Status Cells
+    ══════════════════════════════════════════════════════ */
+    .drift-none     { color: var(--green); font-weight: 700; }
+    .drift-mild     { color: var(--amber); font-weight: 700; }
+    .drift-moderate { color: #f97316; font-weight: 700; }
+    .drift-severe   { color: var(--red); font-weight: 700; }
+
+    /* ══════════════════════════════════════════════════════
+       Quick Picker Chips
+    ══════════════════════════════════════════════════════ */
+    .quick-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .quick-chip {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid #bfdbfe;
+      transition: var(--transition);
+    }
+    .quick-chip:hover { background: var(--accent); color: #fff; }
+
+    /* ══════════════════════════════════════════════════════
+       Locked Chart Containers (Immune to Vertical Expansion / Crawl)
+    ══════════════════════════════════════════════════════ */
+    .chart-container-locked {
+      position: relative;
+      height: 220px;
+      max-height: 220px !important;
+      min-height: 220px !important;
+      width: 100%;
+      overflow: hidden;
+    }
+    .chart-container-locked canvas {
+      max-height: 220px !important;
+      height: 220px !important;
+      display: block;
+      width: 100% !important;
+    }
+  </style>
 </head>
 <body>
+<div class="app-shell">
 
-    <div class="app-shell">
-        <!-- ── SIDEBAR ── -->
-        <aside class="app-sidebar">
-            <a href="#" class="brand-logo">
-                <div class="brand-icon">
-                    <i class="bi bi-shield-check"></i>
-                </div>
-                <div class="brand-text">
-                    <h1>FraudShield</h1>
-                    <span>AI Guardian v2.4</span>
-                </div>
-            </a>
-
-            <div>
-                <div class="nav-section-label">Monitoring</div>
-                <ul class="side-nav">
-                    <li><a href="#" class="active"><i class="bi bi-grid-1x2-fill"></i> Live Dashboard</a></li>
-                    <li><a href="#alerts-section"><i class="bi bi-shield-exclamation text-danger"></i> Threat Alerts <span class="badge-pill badge-danger ms-auto" id="sidebar-alerts-count">0</span></a></li>
-                    <li><a href="#transactions-section"><i class="bi bi-receipt-cutoff"></i> Audit Ledger</a></li>
-                    <li><a href="#" onclick="openFrozenAccountsModal()"><i class="bi bi-lock-fill text-warning"></i> Frozen Accounts <span class="badge-pill badge-danger ms-auto" id="sidebar-frozen-count">0</span></a></li>
-                </ul>
-            </div>
-
-            <div>
-                <div class="nav-section-label">AI & Graph Engines</div>
-                <ul class="side-nav">
-                    <li><a href="#velocity-section"><i class="bi bi-activity text-info"></i> Risk & Velocity</a></li>
-                    <li><a href="#network-section"><i class="bi bi-diagram-3 text-primary"></i> Graph Topology</a></li>
-                    <li><a href="#evaluation-section"><i class="bi bi-cpu text-warning"></i> Threat Evaluator</a></li>
-                </ul>
-            </div>
-
-            <!-- Engine Health Status Box -->
-            <div class="sidebar-widget">
-                <div class="sidebar-widget-title">
-                    <span>Engine Telemetry</span>
-                    <span class="badge-pill badge-safe">ACTIVE</span>
-                </div>
-                <div class="engine-status-row">
-                    <span><span class="pulse-dot dot-green"></span>XGBoost Classifier</span>
-                    <span class="text-white font-monospace">99.8%</span>
-                </div>
-                <div class="engine-status-row">
-                    <span><span class="pulse-dot dot-green"></span>Isolation Forest</span>
-                    <span class="text-white font-monospace">Ready</span>
-                </div>
-                <div class="engine-status-row">
-                    <span><span class="pulse-dot dot-green"></span>GNN Topology</span>
-                    <span class="text-white font-monospace">Live</span>
-                </div>
-                <div class="engine-status-row" id="drift-status">
-                    <span><span class="pulse-dot dot-green"></span>Concept Drift</span>
-                    <span class="text-white font-monospace" id="drift-text">Stable</span>
-                </div>
-                <div class="engine-status-row">
-                    <span><span class="pulse-dot dot-yellow" id="frozen-pulse"></span>Blocked Accts</span>
-                    <span class="text-white font-monospace" id="frozen-sub-count">0</span>
-                </div>
-            </div>
-        </aside>
-
-        <!-- ── MAIN DASHBOARD ── -->
-        <main class="app-main">
-            <!-- Top App Bar -->
-            <header class="top-header">
-                <div class="header-title">
-                    <h2>Live Fraud Intelligence Dashboard</h2>
-                    <p>Real-time cognitive transaction monitoring, multi-model scoring, and incident response</p>
-                </div>
-                <div class="header-actions">
-                    <button id="soundToggleBtn" class="btn-modern" onclick="toggleSoundAlerts()" title="Toggle audible fraud chime">
-                        <i class="bi bi-volume-up-fill text-success" id="soundIcon"></i>
-                        <span id="soundLabel">Sound ON</span>
-                    </button>
-                    <button class="btn-modern btn-modern-danger" onclick="openFrozenAccountsModal()">
-                        <i class="bi bi-shield-lock-fill"></i>
-                        <span>Frozen Accounts</span>
-                        <span class="badge-pill badge-danger" id="frozen-count-badge">0</span>
-                    </button>
-                    <button class="btn-modern" id="refresh-btn">
-                        <i class="bi bi-arrow-clockwise"></i>
-                        <span>Refresh</span>
-                    </button>
-                    <button class="btn-modern btn-modern-primary" id="generate-report-btn">
-                        <i class="bi bi-file-earmark-pdf"></i>
-                        <span>Generate SAR</span>
-                    </button>
-                </div>
-            </header>
-
-            <!-- Top 4 KPI Metrics (Strict CSS Grid) -->
-            <section class="stats-grid">
-                <div class="stat-card risk-cyan">
-                    <div class="stat-content">
-                        <span class="stat-label">Total Ingested</span>
-                        <div class="stat-value" id="total-transactions">0</div>
-                        <span class="stat-subtext text-success"><i class="bi bi-activity"></i> Stream active</span>
-                    </div>
-                    <div class="stat-icon"><i class="bi bi-credit-card-2-front"></i></div>
-                </div>
-
-                <div class="stat-card risk-warning">
-                    <div class="stat-content">
-                        <span class="stat-label">Suspicious Flagged</span>
-                        <div class="stat-value" id="flagged-transactions">0</div>
-                        <span class="stat-subtext text-warning"><i class="bi bi-exclamation-triangle"></i> Automated flags</span>
-                    </div>
-                    <div class="stat-icon"><i class="bi bi-shield-slash"></i></div>
-                </div>
-
-                <div class="stat-card risk-danger">
-                    <div class="stat-content">
-                        <span class="stat-label">High-Risk Threats</span>
-                        <div class="stat-value" id="high-risk">0</div>
-                        <span class="stat-subtext text-danger" id="high-risk-sub"><i class="bi bi-fire"></i> Action required</span>
-                    </div>
-                    <div class="stat-icon"><i class="bi bi-shield-x"></i></div>
-                </div>
-
-                <div class="stat-card risk-safe">
-                    <div class="stat-content">
-                        <span class="stat-label">Average Risk Index</span>
-                        <div class="stat-value" id="avg-risk">0.000</div>
-                        <span class="stat-subtext" id="risk-trend"><i class="bi bi-check2-circle"></i> Baseline normal</span>
-                    </div>
-                    <div class="stat-icon"><i class="bi bi-speedometer2"></i></div>
-                </div>
-            </section>
-
-            <!-- SECTION 1: Transactions Table (Left) & Dedicated Threat Feed (Right) -->
-            <section class="workspace-grid-split" id="transactions-section">
-                <!-- Left: Recent Transactions Table -->
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <h3><i class="bi bi-hdd-stack text-primary"></i> Live Transaction Ledger</h3>
-                        <span class="badge-pill badge-safe"><i class="bi bi-broadcast"></i> REAL-TIME</span>
-                    </div>
-                    <div class="panel-body p-0">
-                        <div class="table-container">
-                            <table class="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th>Txn ID</th>
-                                        <th>Account</th>
-                                        <th>Amount</th>
-                                        <th>Type</th>
-                                        <th>Location</th>
-                                        <th>Risk Score</th>
-                                        <th>Status</th>
-                                        <th style="text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactions-table">
-                                    <tr>
-                                        <td colspan="8" class="text-center py-4 text-muted">
-                                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                                            Awaiting transaction stream...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right: Dedicated In-Page Risk Notifications & Threat Feed (No Popups) -->
-                <div class="panel-card" id="alerts-section">
-                    <div class="panel-header">
-                        <h3>
-                            <i class="bi bi-shield-exclamation text-danger"></i>
-                            <span>Live Threat & Risk Feed</span>
-                            <span class="badge-pill badge-danger" id="threat-feed-counter">0 Threats</span>
-                        </h3>
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 0.72rem;" onclick="clearAlertsFeed()" title="Clear alert history">
-                                <i class="bi bi-trash3"></i> Clear
-                            </button>
-                        </div>
-                    </div>
-                    <div class="panel-body">
-                        <div class="alerts-feed-container" id="alerts-feed-list">
-                            <div class="text-center py-5 text-muted" id="alerts-empty-state">
-                                <i class="bi bi-shield-check text-success fs-1 mb-2 d-block"></i>
-                                <div class="fw-bold text-light">No Active Threat Alerts</div>
-                                <div class="small mt-1 text-muted">Continuous real-time anomaly surveillance active. Detected fraud threats appear here automatically without intrusive popups.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECTION 2: RISK DISTRIBUTION & RISK VELOCITY (Strictly Fixed Bounds, Zero Drift) -->
-            <section class="workspace-grid-half" id="velocity-section">
-                <!-- Risk Distribution Donut Chart -->
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="mb-0"><i class="bi bi-pie-chart text-info"></i> Risk Distribution</h3>
-                            <div class="small text-muted" style="font-size:0.75rem; margin-top:2px;">Composite score breakdown</div>
-                        </div>
-                        <span class="badge-pill badge-safe" id="donut-fraud-rate">0.0% FRAUD RATE</span>
-                    </div>
-                    <div class="panel-body">
-                        <div class="chart-container-locked">
-                            <canvas id="donut-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Risk Velocity (60s) Line Chart -->
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <div>
-                            <h3 class="mb-0"><i class="bi bi-activity text-danger"></i> Risk Velocity (60s)</h3>
-                            <div class="small text-muted" style="font-size:0.75rem; margin-top:2px;">Avg risk score over time</div>
-                        </div>
-                        <span class="badge-pill badge-danger" id="vel-status-badge">
-                            <span class="pulse-dot dot-green"></span> STREAM ACTIVE
-                        </span>
-                    </div>
-                    <div class="panel-body">
-                        <div class="chart-container-locked">
-                            <canvas id="line-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- SECTION 3: Graph Network (Left) & Manual Threat Evaluator (Right) -->
-            <section class="workspace-grid-half" id="network-section">
-                <!-- Vis-Network Graph Visualizer -->
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <h3><i class="bi bi-diagram-3-fill text-primary"></i> Entity Graph Topology</h3>
-                        <div class="d-flex gap-2">
-                            <span class="badge-pill badge-safe" style="font-size: 0.65rem;">Account</span>
-                            <span class="badge-pill badge-medium" style="font-size: 0.65rem;">Merchant</span>
-                            <span class="badge-pill badge-danger" style="font-size: 0.65rem;">Device</span>
-                        </div>
-                    </div>
-                    <div class="panel-body">
-                        <div id="network-graph"></div>
-                    </div>
-                </div>
-
-                <!-- Instant Transaction Analysis Form -->
-                <div class="panel-card" id="evaluation-section">
-                    <div class="panel-header">
-                        <h3><i class="bi bi-lightning-charge text-warning"></i> Manual Threat Evaluation</h3>
-                        <span class="badge-pill badge-medium">MULTI-MODEL</span>
-                    </div>
-                    <div class="panel-body">
-                        <form id="transaction-form">
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
-                                    <label class="form-label-modern">Account ID</label>
-                                    <input type="text" class="form-control-modern" id="account-id" required value="AC00128">
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label-modern">Amount ($)</label>
-                                    <input type="number" step="0.01" class="form-control-modern" id="amount" required value="4500.00">
-                                </div>
-                            </div>
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
-                                    <label class="form-label-modern">Type</label>
-                                    <select class="form-select-modern" id="type">
-                                        <option value="Debit">Debit</option>
-                                        <option value="Credit">Credit</option>
-                                    </select>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label-modern">Channel</label>
-                                    <select class="form-select-modern" id="channel">
-                                        <option value="Online">Online</option>
-                                        <option value="ATM">ATM</option>
-                                        <option value="Branch">Branch</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label-modern">Location</label>
-                                <input type="text" class="form-control-modern" id="location" value="Lagos, Nigeria">
-                            </div>
-                            <button type="submit" class="btn-modern btn-modern-primary w-100 justify-content-center">
-                                <i class="bi bi-cpu"></i> Run Multi-Model Evaluation
-                            </button>
-                        </form>
-                        <div id="analysis-result" class="mt-2"></div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <!-- ── TRANSACTION DETAIL MODAL ── -->
-    <div class="modal fade" id="transactionModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title font-monospace"><i class="bi bi-search text-primary me-2"></i>Transaction Anomaly Breakdown</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="transaction-detail">
-                    <!-- Populated dynamically -->
-                </div>
-                <div class="modal-footer d-flex justify-content-between">
-                    <div>
-                        <button type="button" class="btn btn-danger btn-sm" id="detail-freeze-btn" onclick="toggleFreezeCurrentDetail()">
-                            <i class="bi bi-shield-slash-fill me-1"></i> Freeze Account
-                        </button>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="detail-sar-btn" onclick="generateSARForCurrent()">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> Export SAR PDF
-                        </button>
-                    </div>
-                </div>
-            </div>
+  <!-- ╔══════════════════════════════════════╗
+       ║            SIDEBAR                   ║
+       ╚══════════════════════════════════════╝ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <div class="brand-icon">🛡️</div>
+        <div>
+          <div class="brand-name">FraudGuard AI</div>
         </div>
+      </div>
+      <div class="brand-sub">Enterprise Fraud Detection Platform</div>
     </div>
 
-    <!-- ── FROZEN ACCOUNTS INCIDENT RESPONSE MODAL ── -->
-    <div class="modal fade" id="frozenAccountsModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title text-danger"><i class="bi bi-shield-lock-fill me-2"></i>Incident Response: Frozen Accounts</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="p-3 mb-3 rounded" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3);">
-                        <div class="d-flex align-items-center gap-2 text-danger fw-bold mb-1">
-                            <i class="bi bi-exclamation-octagon-fill"></i> Real-Time Interception Active
-                        </div>
-                        <div class="small text-muted">
-                            All incoming transactions belonging to frozen accounts are immediately blocked with status <code>BLOCKED</code>.
-                        </div>
-                    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Monitoring</div>
+      <div class="nav-item active" id="nav-dashboard" onclick="switchView('dashboard')">
+        <span class="nav-icon">⚡</span> Live Monitoring
+      </div>
+      <div class="nav-item" id="nav-alerts" onclick="switchView('alerts')">
+        <span class="nav-icon">🚨</span> Flagged Incidents
+        <span class="nav-badge" id="alerts-count-badge">0</span>
+      </div>
+      <div class="nav-item" id="nav-graph" onclick="switchView('graph')">
+        <span class="nav-icon">🕸️</span> Entity Knowledge Graph
+      </div>
+    </div>
 
-                    <div class="table-container" style="height: 300px; max-height: 300px;">
-                        <table class="custom-table">
-                            <thead>
-                                <tr>
-                                    <th>Account ID</th>
-                                    <th>Frozen At</th>
-                                    <th>Reason</th>
-                                    <th style="text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="frozen-accounts-table">
-                                <tr><td colspan="4" class="text-center text-muted py-4">Loading frozen accounts...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Investigation</div>
+      <div class="nav-item" id="nav-customers" onclick="switchView('customers')">
+        <span class="nav-icon">👤</span> Customer Profiling
+      </div>
+      <div class="nav-item" id="nav-frozen" onclick="switchView('frozen')">
+        <span class="nav-icon">❄️</span> Incident Response
+        <span class="nav-badge" id="frozen-count-badge" style="background:rgba(59,130,246,.7);">0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Compliance & AI</div>
+      <div class="nav-item" id="nav-reports" onclick="switchView('reports')">
+        <span class="nav-icon">📄</span> Compliance & Reports
+      </div>
+      <div class="nav-item" id="nav-models" onclick="switchView('models')">
+        <span class="nav-icon">🤖</span> ML Pipeline & Drift
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-info">
+        v1.0.0 · XGBoost + GNN + IsoForest<br/>
+        Ensemble weights: 0.45 / 0.30 / 0.25<br/>
+        Threshold: 0.50 · High Risk: 0.70
+      </div>
+    </div>
+  </nav>
+
+  <!-- ╔══════════════════════════════════════╗
+       ║              MAIN                    ║
+       ╚══════════════════════════════════════╝ -->
+  <div class="main">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-breadcrumb">
+        <div class="breadcrumb-title" id="view-title">⚡ Live Monitoring</div>
+        <div class="breadcrumb-desc" id="view-desc">Real-time transaction stream with ensemble AI scoring</div>
+      </div>
+
+      <div class="live-beacon">
+        <div class="beacon-dot"></div>
+        LIVE INGESTION
+      </div>
+
+      <div class="header-clock" id="header-clock">--:--:-- UTC</div>
+
+      <button class="header-btn" id="audio-btn" onclick="toggleAudio()">
+        🔊 Audio Siren: ON
+      </button>
+
+      <div class="frozen-badge" id="frozen-header-count">❄️ Frozen: 0</div>
+    </header>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ════════════════════════════════════════
+           VIEW 1: Live Monitoring
+      ════════════════════════════════════════ -->
+      <div id="view-dashboard" class="view active">
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card kpi-blue">
+            <div class="kpi-icon">🔍</div>
+            <div class="kpi-value" id="kpi-total">0</div>
+            <div class="kpi-label">Total Scanned</div>
+            <div class="kpi-delta">Ring buffer (last 1000)</div>
+          </div>
+          <div class="kpi-card kpi-red">
+            <div class="kpi-icon">🚨</div>
+            <div class="kpi-value" id="kpi-flagged">0</div>
+            <div class="kpi-label">Flagged Frauds</div>
+            <div class="kpi-delta" id="kpi-fraud-rate">0.0% fraud rate</div>
+          </div>
+          <div class="kpi-card kpi-amber">
+            <div class="kpi-icon">⚠️</div>
+            <div class="kpi-value" id="kpi-highrisk">0</div>
+            <div class="kpi-label">High Risk &gt;0.7</div>
+            <div class="kpi-delta" id="kpi-avg-risk">Avg risk: 0.000</div>
+          </div>
+          <div class="kpi-card kpi-purple">
+            <div class="kpi-icon">🔒</div>
+            <div class="kpi-value" id="kpi-blocked">0</div>
+            <div class="kpi-label">Blocked Accounts</div>
+            <div class="kpi-delta" id="kpi-frozen-count">Frozen: 0</div>
+          </div>
         </div>
+
+        <!-- Section: Risk Distribution & Risk Velocity (Locked Bound, Zero Drift) -->
+        <div class="grid-2 mb-20" id="charts-section">
+          <!-- Risk Distribution Donut Chart -->
+          <div class="card">
+            <div class="card-header flex justify-between items-center">
+              <div>
+                <div class="card-title"><span style="color:var(--accent)">📊</span> Risk Distribution</div>
+                <div class="card-sub">Real-time classification breakdown</div>
+              </div>
+              <span class="badge badge-green" id="donut-fraud-rate">0.0% FRAUD RATE</span>
+            </div>
+            <div class="card-body">
+              <div class="chart-container-locked">
+                <canvas id="donut-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Velocity Line Chart -->
+          <div class="card">
+            <div class="card-header flex justify-between items-center">
+              <div>
+                <div class="card-title"><span style="color:#ef4444">📈</span> Risk Velocity (60s)</div>
+                <div class="card-sub">Average transaction risk score trajectory</div>
+              </div>
+              <span class="badge badge-red" id="vel-status-badge">● STREAM ACTIVE</span>
+            </div>
+            <div class="card-body">
+              <div class="chart-container-locked">
+                <canvas id="line-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dedicated Live Threat Alerts Section (Replaces Popups & Removed Risk Distribution/Velocity Charts) -->
+        <div class="card mb-20" id="threat-alerts-section">
+          <div class="card-header flex justify-between items-center">
+            <div class="flex items-center gap-8">
+              <span style="font-size:1.2rem">🚨</span>
+              <div>
+                <div class="card-title" style="color:#ef4444;font-weight:700">Live Threat & Incident Alerts Feed</div>
+                <div class="card-sub">Real-time suspicious transaction stream (in-page alerts feed instead of popups)</div>
+              </div>
+            </div>
+            <div class="flex gap-8 items-center">
+              <span class="badge badge-red" id="alerts-count-badge">0 Alerts</span>
+              <button class="btn btn-outline btn-sm" onclick="clearThreatFeed()">Clear All</button>
+            </div>
+          </div>
+          <div style="max-height: 280px; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;" id="threat-alerts-feed-container">
+            <div class="text-center text-muted py-12" id="threat-empty-msg" style="color:var(--text-secondary);font-size:13px">
+              ✅ No active threat incidents detected. Real-time surveillance active.
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaction Table -->
+        <div class="card mb-20">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Live Transaction Stream</div>
+              <div class="card-sub">Click any row for deep audit</div>
+            </div>
+            <div class="flex gap-8 items-center">
+              <div class="search-bar">
+                <input type="text" id="txn-search" placeholder="Search account, location..." style="width:220px" oninput="filterTable()" />
+              </div>
+              <button class="btn btn-outline btn-sm" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+            </div>
+          </div>
+
+          <div class="filter-chips mb-12">
+            <div class="chip active" onclick="setFilter('all',this)">All</div>
+            <div class="chip" onclick="setFilter('highrisk',this)">High Risk &gt;0.7</div>
+            <div class="chip" onclick="setFilter('flagged',this)">Flagged</div>
+            <div class="chip" onclick="setFilter('blocked',this)">BLOCKED</div>
+            <div class="chip" onclick="setFilter('cleared',this)">Cleared</div>
+          </div>
+
+          <div class="table-wrap">
+            <table id="live-table">
+              <thead>
+                <tr>
+                  <th>TXN ID</th>
+                  <th>Account</th>
+                  <th>Amount</th>
+                  <th>Type</th>
+                  <th>Location</th>
+                  <th>Risk Score</th>
+                  <th>XGB</th>
+                  <th>GNN</th>
+                  <th>IsoF</th>
+                  <th>Status</th>
+                  <th>Time</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="live-tbody">
+                <tr>
+                  <td colspan="12">
+                    <div class="empty-state">
+                      <div class="empty-state-icon">⏳</div>
+                      <div class="empty-state-msg">Waiting for transactions...</div>
+                      <div class="empty-state-sub">Live ingestion streaming automatically</div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Structured Pagination Toolbar -->
+          <div class="table-pagination">
+            <div class="pagination-info" id="pagination-info">
+              Showing <strong>0–0</strong> of <strong>0</strong> transactions
+            </div>
+            <div class="pagination-controls">
+              <label for="rows-per-page" class="text-xs text-muted" style="margin:0;display:inline;">Rows:</label>
+              <select id="rows-per-page" class="pagination-select" onchange="changePageSize(this.value)">
+                <option value="10">10</option>
+                <option value="15" selected>15</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <button class="btn-page" id="btn-first" onclick="goToPage(1)" title="First Page">«</button>
+              <button class="btn-page" id="btn-prev" onclick="prevPage()" title="Previous Page">‹</button>
+              <span class="page-indicator" id="page-indicator">Page 1 of 1</span>
+              <button class="btn-page" id="btn-next" onclick="nextPage()" title="Next Page">›</button>
+              <button class="btn-page" id="btn-last" onclick="goToLastPage()" title="Last Page">»</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Evaluator -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🔬 Custom Transaction Evaluator</div>
+              <div class="card-sub">Submit a custom transaction for real-time ensemble scoring</div>
+            </div>
+          </div>
+          <div class="form-row cols-3">
+            <div class="form-group">
+              <label>Account ID</label>
+              <input type="text" id="eval-account" value="AC00128" />
+            </div>
+            <div class="form-group">
+              <label>Transaction Amount ($)</label>
+              <input type="number" id="eval-amount" value="12500" />
+            </div>
+            <div class="form-group">
+              <label>Account Balance ($)</label>
+              <input type="number" id="eval-balance" value="15000" />
+            </div>
+          </div>
+          <div class="form-row cols-3">
+            <div class="form-group">
+              <label>Transaction Type</label>
+              <select id="eval-type">
+                <option>Wire Transfer</option>
+                <option>Online Purchase</option>
+                <option>ATM Withdrawal</option>
+                <option>POS Debit</option>
+                <option>ACH Transfer</option>
+                <option>International Wire</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" id="eval-location" value="Moscow" />
+            </div>
+            <div class="form-group">
+              <label>Login Attempts</label>
+              <input type="number" id="eval-logins" value="6" min="1" max="10" />
+            </div>
+          </div>
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Transaction Duration (seconds)</label>
+              <input type="number" id="eval-duration" value="18" />
+            </div>
+            <div class="form-group">
+              <label>Device ID</label>
+              <input type="text" id="eval-device" value="DVC_SUSP_01" />
+            </div>
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-primary" onclick="runEvaluator()">🔍 Analyze Transaction</button>
+            <button class="btn btn-outline" onclick="resetEvaluator()">↺ Reset</button>
+          </div>
+
+          <div id="eval-result" style="display:none; margin-top:20px;">
+            <div class="divider"></div>
+            <div class="flex items-center gap-16 mb-16" style="flex-wrap:wrap;">
+              <div>
+                <div class="text-xs text-muted">Composite Risk Score</div>
+                <div style="font-size:32px;font-weight:800;letter-spacing:-1px;" id="eval-risk-val">—</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">Status</div>
+                <div id="eval-status-badge" style="font-size:14px;font-weight:700;margin-top:4px;">—</div>
+              </div>
+              <div>
+                <div class="text-xs text-muted">XGBoost / GNN / IsoForest</div>
+                <div style="font-size:13px;font-weight:600;margin-top:4px;" id="eval-model-scores">—</div>
+              </div>
+            </div>
+            <div class="card-title mb-12">SHAP Feature Contributions</div>
+            <div id="eval-shap-bars" class="shap-bar-wrap"></div>
+          </div>
+        </div>
+      </div><!-- /view-dashboard -->
+
+
+      <!-- ════════════════════════════════════════
+           VIEW 2: Flagged Incidents
+      ════════════════════════════════════════ -->
+      <div id="view-alerts" class="view">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🚨 Incident Triage Queue</div>
+              <div class="card-sub">Transactions requiring analyst review</div>
+            </div>
+            <div class="flex gap-8">
+              <button class="btn btn-danger btn-sm" onclick="batchFreezeSelected()">🔒 Batch Freeze Selected</button>
+              <button class="btn btn-outline btn-sm" onclick="refreshAlerts()">↺ Refresh</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all-alerts" onchange="toggleAllAlerts(this)" /></th>
+                  <th>TXN ID</th>
+                  <th>Account</th>
+                  <th>Amount</th>
+                  <th>Risk Score</th>
+                  <th>Location</th>
+                  <th>Severity</th>
+                  <th>Top SHAP Driver</th>
+                  <th>Time</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="alerts-tbody">
+                <tr><td colspan="10">
+                  <div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-msg">No flagged incidents</div></div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-alerts -->
+
+
+      <!-- ════════════════════════════════════════
+           VIEW 3: Entity Knowledge Graph
+      ════════════════════════════════════════ -->
+      <div id="view-graph" class="view">
+        <div class="card mb-16">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🕸️ Transaction Entity Graph</div>
+              <div class="card-sub">Account (Blue) ↔ Merchant (Green) ↔ Device (Amber)</div>
+            </div>
+            <div class="flex gap-8 items-center">
+              <div class="search-bar">
+                <input type="text" id="graph-search" placeholder="Search node..." style="width:180px" oninput="searchGraph()" />
+              </div>
+              <button class="btn btn-outline btn-sm" id="physics-btn" onclick="togglePhysics()">🧊 Freeze Physics</button>
+              <button class="btn btn-outline btn-sm" onclick="fitGraph()">⊞ Fit View</button>
+              <button class="btn btn-primary btn-sm" onclick="loadGraph()">↺ Reload</button>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="flex gap-16 mb-12">
+            <div class="flex items-center gap-8">
+              <div style="width:14px;height:14px;border-radius:50%;background:#3b82f6;"></div>
+              <span class="text-sm text-secondary">Account</span>
+            </div>
+            <div class="flex items-center gap-8">
+              <div style="width:14px;height:14px;border-radius:50%;background:#22c55e;"></div>
+              <span class="text-sm text-secondary">Merchant</span>
+            </div>
+            <div class="flex items-center gap-8">
+              <div style="width:14px;height:14px;border-radius:50%;background:#f59e0b;"></div>
+              <span class="text-sm text-secondary">Device</span>
+            </div>
+            <div id="graph-stats" class="text-sm text-muted" style="margin-left:auto;"></div>
+          </div>
+
+          <div id="graph-canvas"></div>
+        </div>
+      </div><!-- /view-graph -->
+
+
+      <!-- ════════════════════════════════════════
+           VIEW 4: Customer Profiling
+      ════════════════════════════════════════ -->
+      <div id="view-customers" class="view">
+        <div class="card mb-20">
+          <div class="card-header">
+            <div>
+              <div class="card-title">👤 Customer Risk Profile Lookup</div>
+              <div class="card-sub">Search by Customer ID or Account ID</div>
+            </div>
+          </div>
+          <div class="flex gap-8 items-center mb-12">
+            <div class="search-bar flex-1">
+              <input type="text" id="customer-search" placeholder="Enter Customer ID (e.g. AC00128)" style="max-width:380px" />
+            </div>
+            <button class="btn btn-primary" onclick="lookupCustomer()">🔍 Look Up Profile</button>
+          </div>
+          <div class="quick-chips">
+            <span class="quick-chip" onclick="quickLookup('AC00128')">AC00128</span>
+            <span class="quick-chip" onclick="quickLookup('AC00455')">AC00455</span>
+            <span class="quick-chip" onclick="quickLookup('AC00999')">AC00999</span>
+            <span class="quick-chip" onclick="quickLookup('AC00200')">AC00200</span>
+            <span class="quick-chip" onclick="quickLookup('AC00333')">AC00333</span>
+          </div>
+        </div>
+
+        <div id="profile-result" style="display:none;">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title" id="profile-customer-id">Customer Profile</div>
+                  <div class="card-sub">Risk behavior analysis</div>
+                </div>
+                <div id="profile-risk-tier" class="badge badge-gray">LOW</div>
+              </div>
+              <div id="profile-metrics"></div>
+            </div>
+            <div class="card">
+              <div class="card-title mb-12">Behavioral Anomaly Indicators</div>
+              <div id="profile-anomaly-bars" class="shap-bar-wrap"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="profile-empty" class="card">
+          <div class="empty-state">
+            <div class="empty-state-icon">👤</div>
+            <div class="empty-state-msg">Enter a Customer ID to view their risk profile</div>
+            <div class="empty-state-sub">Profiles are built automatically from streaming transactions</div>
+          </div>
+        </div>
+      </div><!-- /view-customers -->
+
+
+      <!-- ════════════════════════════════════════
+           VIEW 5: Incident Response (Freeze)
+      ════════════════════════════════════════ -->
+      <div id="view-frozen" class="view">
+        <div class="grid-2 mb-20">
+          <!-- Freeze Form -->
+          <div class="card">
+            <div class="card-title mb-16">🔒 Freeze Account</div>
+            <div class="form-group">
+              <label>Account ID</label>
+              <input type="text" id="freeze-account-id" placeholder="e.g. AC00128" />
+            </div>
+            <div class="form-group">
+              <label>Incident Reason</label>
+              <select id="freeze-reason">
+                <option value="Suspicious transaction pattern detected">Suspicious transaction pattern detected</option>
+                <option value="Account takeover attempt">Account takeover attempt</option>
+                <option value="Velocity abuse — card probing">Velocity abuse — card probing</option>
+                <option value="High-risk geo-location activity">High-risk geo-location activity</option>
+                <option value="Shared device collusion ring">Shared device collusion ring</option>
+                <option value="FinCEN SAR filing in progress">FinCEN SAR filing in progress</option>
+                <option value="Manual analyst review required">Manual analyst review required</option>
+              </select>
+            </div>
+            <button class="btn btn-danger w-full" onclick="freezeAccount()">🔒 Freeze Account</button>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="card">
+            <div class="card-title mb-16">❄️ Frozen Registry Summary</div>
+            <div class="profile-metric">
+              <span class="profile-metric-label">Total Frozen Accounts</span>
+              <span class="profile-metric-value" id="frozen-total">0</span>
+            </div>
+            <div class="profile-metric">
+              <span class="profile-metric-label">Blocked Transactions (session)</span>
+              <span class="profile-metric-value" id="frozen-blocked-txns">0</span>
+            </div>
+            <div class="profile-metric">
+              <span class="profile-metric-label">Freeze Rate</span>
+              <span class="profile-metric-value" id="frozen-rate">0%</span>
+            </div>
+            <button class="btn btn-outline btn-sm mt-12 w-full" onclick="refreshFrozenList()">↺ Refresh Registry</button>
+          </div>
+        </div>
+
+        <!-- Frozen Accounts Table -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Active Frozen Accounts</div>
+            <button class="btn btn-outline btn-sm" onclick="refreshFrozenList()">↺ Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Account ID</th>
+                  <th>Frozen At (UTC)</th>
+                  <th>Reason</th>
+                  <th>Duration</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="frozen-tbody">
+                <tr><td colspan="5">
+                  <div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-msg">No frozen accounts</div></div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /view-frozen -->
+
+
+      <!-- ════════════════════════════════════════
+           VIEW 6: Compliance & Reports
+      ════════════════════════════════════════ -->
+      <div id="view-reports" class="view">
+        <div class="grid-2 mb-20">
+          <!-- SAR Generator -->
+          <div class="card">
+            <div class="card-title mb-4">📄 FinCEN SAR Report Generator</div>
+            <div class="card-sub mb-16">Generate a Suspicious Activity Report PDF (31 CFR § 1020.320)</div>
+
+            <div class="form-group">
+              <label>Case Reference ID (optional)</label>
+              <input type="text" id="sar-case-id" placeholder="Auto-generated if blank" />
+            </div>
+            <div class="form-group">
+              <label>Filing Analyst Name</label>
+              <input type="text" id="sar-analyst" value="FraudGuard AI Compliance Engine" />
+            </div>
+            <div class="form-group">
+              <label>Narrative Notes</label>
+              <textarea id="sar-notes" rows="3" placeholder="Additional observations for compliance team..."></textarea>
+            </div>
+            <button class="btn btn-primary w-full" onclick="generateSAR()">📄 Generate & Download SAR PDF</button>
+          </div>
+
+          <!-- Export Panel -->
+          <div class="card">
+            <div class="card-title mb-4">📊 Audit Data Export</div>
+            <div class="card-sub mb-16">Export raw transaction audit trail</div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+              <button class="btn btn-outline w-full" onclick="exportCSV()">
+                📈 Export Audit CSV (All Transactions)
+              </button>
+              <button class="btn btn-outline w-full" onclick="exportJSON()">
+                📋 Export Audit JSON (Full Detail)
+              </button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="card-title mb-12">Regulatory Compliance Checklist</div>
+            <div id="compliance-checklist">
+              <div class="check-item">
+                <div class="check-icon check-pass">✓</div>
+                <div>
+                  <div class="font-semibold text-sm">BSA/AML Real-Time Monitoring</div>
+                  <div class="text-xs text-muted">Automated surveillance active on all transactions</div>
+                </div>
+              </div>
+              <div class="check-item">
+                <div class="check-icon check-pass">✓</div>
+                <div>
+                  <div class="font-semibold text-sm">FinCEN SAR Filing Capability</div>
+                  <div class="text-xs text-muted">31 CFR § 1020.320 — Automated report generation</div>
+                </div>
+              </div>
+              <div class="check-item">
+                <div class="check-icon check-pass">✓</div>
+                <div>
+                  <div class="font-semibold text-sm">OFAC Sanctions Geo-Screening</div>
+                  <div class="text-xs text-muted">10 high-risk locations flagged in real-time</div>
+                </div>
+              </div>
+              <div class="check-item">
+                <div class="check-icon check-pass">✓</div>
+                <div>
+                  <div class="font-semibold text-sm">AI Explainability (XAI/SHAP)</div>
+                  <div class="text-xs text-muted">SHAP TreeExplainer — decision rationale per transaction</div>
+                </div>
+              </div>
+              <div class="check-item">
+                <div class="check-icon check-pass">✓</div>
+                <div>
+                  <div class="font-semibold text-sm">Account Freeze / Unfreeze Control</div>
+                  <div class="text-xs text-muted">Automated incident response with audit trail</div>
+                </div>
+              </div>
+              <div class="check-item">
+                <div class="check-icon check-warn">○</div>
+                <div>
+                  <div class="font-semibold text-sm">Human Analyst Review (Recommended)</div>
+                  <div class="text-xs text-muted">Manual review advised for CRITICAL risk-tier cases</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /view-reports -->
+
+
+      <!-- ════════════════════════════════════════
+           VIEW 7: ML Pipeline & Drift
+      ════════════════════════════════════════ -->
+      <div id="view-models" class="view">
+
+        <!-- Model Status Cards -->
+        <div class="grid-2 mb-20">
+          <div class="model-card" id="xgb-card">
+            <div class="flex items-center gap-12 mb-12">
+              <div class="model-status-dot dot-active" id="xgb-dot"></div>
+              <div style="font-size:15px;font-weight:700;">XGBoost Classifier</div>
+              <div class="badge badge-blue" style="margin-left:auto;">Weight: 0.45</div>
+            </div>
+            <div class="text-sm text-secondary mb-8">Supervised gradient-boosted tree ensemble (500 estimators)</div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Status</span>
+              <span class="badge badge-green" id="xgb-status">ACTIVE</span>
+            </div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Artifact</span>
+              <span class="text-xs font-semibold" style="font-family:monospace;">trained_models/xgboost.pkl</span>
+            </div>
+          </div>
+
+          <div class="model-card" id="iso-card">
+            <div class="flex items-center gap-12 mb-12">
+              <div class="model-status-dot dot-active" id="iso-dot"></div>
+              <div style="font-size:15px;font-weight:700;">Isolation Forest</div>
+              <div class="badge badge-amber" style="margin-left:auto;">Weight: 0.25</div>
+            </div>
+            <div class="text-sm text-secondary mb-8">Unsupervised anomaly detector — 200 isolation trees</div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Status</span>
+              <span class="badge badge-green" id="iso-status">ACTIVE</span>
+            </div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Artifact</span>
+              <span class="text-xs font-semibold" style="font-family:monospace;">trained_models/isolation_forest.pkl</span>
+            </div>
+          </div>
+
+          <div class="model-card" id="gnn-card">
+            <div class="flex items-center gap-12 mb-12">
+              <div class="model-status-dot dot-active" id="gnn-dot"></div>
+              <div style="font-size:15px;font-weight:700;">Graph Neural Network</div>
+              <div class="badge badge-purple" style="margin-left:auto;">Weight: 0.30</div>
+            </div>
+            <div class="text-sm text-secondary mb-8">3-layer GCNConv (PyTorch Geometric) — relational fraud patterns</div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Status</span>
+              <span class="badge badge-green" id="gnn-status">ACTIVE</span>
+            </div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Type</span>
+              <span class="text-xs font-semibold" id="gnn-type" style="font-family:monospace;">FallbackGNN</span>
+            </div>
+          </div>
+
+          <div class="model-card" id="shap-card">
+            <div class="flex items-center gap-12 mb-12">
+              <div class="model-status-dot dot-active" id="shap-dot"></div>
+              <div style="font-size:15px;font-weight:700;">SHAP TreeExplainer</div>
+              <div class="badge badge-gray" style="margin-left:auto;">XAI Layer</div>
+            </div>
+            <div class="text-sm text-secondary mb-8">Top-4 SHAP feature contributions per transaction decision</div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Status</span>
+              <span class="badge badge-green" id="shap-status">ACTIVE</span>
+            </div>
+            <div class="profile-metric" style="padding:8px 0;">
+              <span class="text-sm text-muted">Artifact</span>
+              <span class="text-xs font-semibold" style="font-family:monospace;">trained_models/shap_explainer.pkl</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Concept Drift -->
+        <div class="card mb-20">
+          <div class="card-header">
+            <div>
+              <div class="card-title">📊 KS-Test Concept Drift Detection</div>
+              <div class="card-sub">Kolmogorov-Smirnov two-sample test on streaming transaction distributions</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="refreshDrift()">↺ Check Drift</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>KS Statistic</th>
+                  <th>P-Value</th>
+                  <th>Drift Detected</th>
+                  <th>Severity</th>
+                  <th>Reference Mean</th>
+                  <th>Current Mean</th>
+                  <th>Mean Shift %</th>
+                </tr>
+              </thead>
+              <tbody id="drift-tbody">
+                <tr><td colspan="8">
+                  <div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-msg">Insufficient data — stream transactions to populate drift windows</div></div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- AutoML Retrain -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">🤖 AutoML Self-Healing Retrainer</div>
+              <div class="card-sub">Cross-validated RandomizedSearchCV over XGBoost hyperparameter space</div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <div class="form-row cols-2 mb-12">
+                <div class="form-group">
+                  <label>Training Samples</label>
+                  <input type="number" id="retrain-samples" value="2000" />
+                </div>
+                <div class="form-group">
+                  <label>Search Iterations</label>
+                  <input type="number" id="retrain-iter" value="15" />
+                </div>
+              </div>
+              <button class="btn btn-primary" id="retrain-btn" onclick="triggerRetrain()" style="width:100%;">
+                🚀 Trigger AutoML Retrain
+              </button>
+            </div>
+            <div>
+              <div class="card-sub mb-8">Training Progress</div>
+              <div class="progress-bar mb-8">
+                <div class="progress-fill" id="retrain-progress" style="width:0%"></div>
+              </div>
+              <div class="text-sm text-secondary" id="retrain-msg">Idle — click to start</div>
+              <div id="retrain-result" class="mt-12" style="display:none;">
+                <div class="table-wrap">
+                  <table>
+                    <tbody id="retrain-metrics-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /view-models -->
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app-shell -->
+
+
+<!-- ════════════════════════════════════════
+     TRANSACTION DEEP AUDIT MODAL
+════════════════════════════════════════ -->
+<div class="modal-overlay" id="audit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-txn-id">Transaction Deep Audit</div>
+        <div class="text-sm text-muted" id="modal-timestamp">—</div>
+      </div>
+      <button class="btn btn-ghost" onclick="closeModal('audit-modal')">✕</button>
     </div>
+    <div class="modal-body">
+      <!-- Metadata -->
+      <div class="grid-2 mb-16" id="modal-meta-grid"></div>
+      <div class="divider"></div>
 
-    <!-- Bootstrap Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+      <!-- Model Scores -->
+      <div class="card-title mb-12">🤖 Model Probability Breakdown</div>
+      <div class="grid-3 mb-16" id="modal-scores-grid"></div>
+      <div class="divider"></div>
 
-    <script>
-        // ── State Variables ──────────────────────────────────────────────────
-        let network = null;
-        const txnModal = new bootstrap.Modal(document.getElementById('transactionModal'));
-        const frozenModal = new bootstrap.Modal(document.getElementById('frozenAccountsModal'));
-        const POLL_INTERVAL = 2000;
-        let lastSeenId = 0;
-        let isInitialLoad = true;
-        let soundAlertsEnabled = true;
-        let currentDetailTxn = null;
+      <!-- SHAP -->
+      <div class="card-title mb-12">🔬 SHAP Feature Impact</div>
+      <div id="modal-shap-bars" class="shap-bar-wrap mb-16"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-freeze-btn" onclick="freezeFromModal()">🔒 Freeze Account</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal('audit-modal')">Close</button>
+    </div>
+  </div>
+</div>
 
-        // Dedicated Threat Feed Storage
-        const threatAlertsFeed = [];
-        const seenThreatTxnIds = new Set();
+<!-- Toast Container -->
+<div id="toast-container"></div>
 
-        // ── Charts Management ────────────────────────────────────────────────
-        let donutChart = null;
-        let lineChart = null;
-        const velocityHistory = [];
-        const MAX_VELOCITY = 30;
 
-        function initCharts() {
-            const donutEl = document.getElementById('donut-chart');
-            if (donutEl) {
-                const donutCtx = donutEl.getContext('2d');
-                donutChart = new Chart(donutCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Cleared / Low Risk', 'Medium Risk', 'High Risk', 'Blocked'],
-                        datasets: [{
-                            data: [1, 0, 0, 0],
-                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-                            borderWidth: 2,
-                            borderColor: '#151d30',
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: '#94a3b8',
-                                    font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
-                                    boxWidth: 10,
-                                    padding: 12
-                                }
-                            }
-                        }
-                    }
-                });
+<!-- ════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════ -->
+<script>
+// ══════════════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════════════
+let allTransactions = [];
+let currentFilter   = 'all';
+let searchQuery     = '';
+let isPaused        = false;
+let audioEnabled    = true;
+let refreshInterval = null;
+let chartInterval   = null;
+let audioCtx        = null;
+let donutChart      = null;
+let lineChart       = null;
+let graphNetwork    = null;
+let graphData       = { nodes: [], edges: [] };
+let physicsEnabled  = true;
+let currentModalTxn = null;
+let velocityHistory = [];
+const MAX_VELOCITY  = 60;
+
+// ══════════════════════════════════════════════════════════
+// Clock
+// ══════════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const utc = now.toISOString().replace('T',' ').substring(0,19) + ' UTC';
+  document.getElementById('header-clock').textContent = utc;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ══════════════════════════════════════════════════════════
+// View Switcher
+// ══════════════════════════════════════════════════════════
+const VIEW_META = {
+  dashboard:  { title: '⚡ Live Monitoring',         desc: 'Real-time transaction stream with ensemble AI scoring' },
+  alerts:     { title: '🚨 Flagged Incidents',        desc: 'Incident triage queue — suspicious activity requiring review' },
+  graph:      { title: '🕸️ Entity Knowledge Graph',  desc: 'Account–Merchant–Device relational network (Vis-Network)' },
+  customers:  { title: '👤 Customer Profiling',       desc: 'Behavioral risk profiles with velocity and deviation metrics' },
+  frozen:     { title: '❄️ Incident Response',        desc: 'Account freeze/unfreeze registry and controls' },
+  reports:    { title: '📄 Compliance & SAR Reports', desc: 'FinCEN SAR generation, audit export, and compliance checklist' },
+  models:     { title: '🤖 ML Pipeline & Drift',      desc: 'Model status, KS-test concept drift, and AutoML retrainer' },
+};
+
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.getElementById('nav-' + view).classList.add('active');
+
+  const meta = VIEW_META[view] || {};
+  document.getElementById('view-title').textContent  = meta.title || view;
+  document.getElementById('view-desc').textContent   = meta.desc  || '';
+
+  // Lazy-load graph when needed
+  if (view === 'graph') loadGraph();
+  if (view === 'models') { fetchModelStatus(); refreshDrift(); }
+  if (view === 'alerts') refreshAlerts();
+  if (view === 'frozen') refreshFrozenList();
+}
+
+// ══════════════════════════════════════════════════════════
+// Audio Engine (Web Audio API — zero external files)
+// ══════════════════════════════════════════════════════════
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playAlertChime() {
+  if (!audioEnabled) return;
+  try {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const now = audioCtx.currentTime;
+    const gain = audioCtx.createGain();
+    gain.connect(audioCtx.destination);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+
+    // Tone 1: 880 Hz attention ping
+    const osc1 = audioCtx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    osc1.frequency.exponentialRampToValueAtTime(659.25, now + 0.4);
+    osc1.connect(gain);
+    osc1.start(now);
+    osc1.stop(now + 1.0);
+
+    // Tone 2: harmonic fill
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(440, now + 0.1);
+    osc2.connect(gain);
+    osc2.start(now + 0.1);
+    osc2.stop(now + 0.7);
+  } catch(e) { /* silent fail */ }
+}
+
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  document.getElementById('audio-btn').textContent = audioEnabled ? '🔊 Audio Siren: ON' : '🔇 Audio Siren: OFF';
+  if (audioEnabled) initAudio();
+}
+
+// ══════════════════════════════════════════════════════════
+// Toast
+// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// Dedicated In-Page Threat Feed & Alerts (No Popups)
+// ══════════════════════════════════════════════════════════
+let threatFeedCount = 0;
+
+function clearThreatFeed() {
+  const container = document.getElementById('threat-alerts-feed-container');
+  if (container) {
+    container.innerHTML = '<div class="text-center text-muted py-12" id="threat-empty-msg" style="color:var(--text-secondary);font-size:13px">✅ No active threat incidents detected. Real-time surveillance active.</div>';
+  }
+  threatFeedCount = 0;
+  const badge = document.getElementById('alerts-count-badge');
+  if (badge) badge.textContent = '0 Alerts';
+}
+
+function showToast(txn) {
+  const risk = parseFloat(txn.RiskScore || 0);
+  const container = document.getElementById('threat-alerts-feed-container');
+  const emptyMsg = document.getElementById('threat-empty-msg');
+  if (emptyMsg) emptyMsg.remove();
+
+  const id = 'threat-' + Date.now();
+  const driver = (txn.SHAPDrivers && txn.SHAPDrivers[0]) ? txn.SHAPDrivers[0].feature : 'Unknown';
+  const isBlocked = txn.IsBlocked || txn.Status === 'BLOCKED';
+  const borderColor = isBlocked ? '#3b82f6' : (risk >= 0.7 ? '#ef4444' : '#f59e0b');
+  const emoji = isBlocked ? '🔒' : (risk >= 0.7 ? '🚨' : '⚠️');
+  const label = isBlocked ? 'BLOCKED' : (risk >= 0.7 ? 'HIGH RISK' : 'ELEVATED');
+
+  if (container) {
+    threatFeedCount++;
+    const badge = document.getElementById('alerts-count-badge');
+    if (badge) badge.textContent = `${threatFeedCount} Alerts`;
+
+    const card = document.createElement('div');
+    card.id = id;
+    card.style.cssText = `background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${borderColor}; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px;`;
+    card.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="font-weight:700; font-size:13px; color:var(--text-primary);">${emoji} ${label} &bull; Account: <code>${txn.AccountID}</code> &bull; <strong>$${parseFloat(txn.TransactionAmount||0).toLocaleString('en-US',{minimumFractionDigits:2})}</strong></div>
+        <div style="font-size:11px; color:var(--text-secondary);">${txn.Location || '?'} &bull; ${txn.TransactionType || '?'} &bull; Top driver: <em>${driver}</em></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge ${risk>=0.7?'badge-red':'badge-amber'}" style="font-size:11px;">Risk: ${risk.toFixed(3)}</span>
+        ${isBlocked ? '' : `<button class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px" onclick="quickFreeze('${txn.AccountID}')">🔒 Freeze</button>`}
+        <button class="btn btn-outline btn-sm" style="padding:2px 6px;font-size:11px" onclick="document.getElementById('${id}').remove()">✕</button>
+      </div>
+    `;
+    container.insertBefore(card, container.firstChild);
+    if (container.children.length > 40) container.lastChild.remove();
+  }
+  playAlertChime();
+}
+
+function dismissToast(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.remove();
+}
+
+function quickFreeze(accountId) {
+  fetch('/api/accounts/freeze', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ account_id: accountId, reason: 'Quick-freeze via dashboard alert' })
+  }).then(r => r.json()).then(() => {
+    showNotification(`Account ${accountId} frozen`, 'success');
+    updateHeaderFrozenCount();
+  });
+}
+
+function showNotification(msg, type='info') {
+  console.log(`[Notification] ${type}: ${msg}`);
+}
+
+// ══════════════════════════════════════════════════════════
+// Charts
+// ══════════════════════════════════════════════════════════
+function initCharts() {
+  const donutEl = document.getElementById('donut-chart');
+  if (donutEl) {
+    const donutCtx = donutEl.getContext('2d');
+    donutChart = new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Cleared', 'High Risk', 'Flagged', 'Blocked'],
+        datasets: [{
+          data: [1, 0, 0, 0],
+          backgroundColor: ['#10b981','#f59e0b','#ef4444','#8b5cf6'],
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 4,
+        }]
+      },
+      options: {
+        cutout: '72%',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+              boxWidth: 10,
+              padding: 12
             }
+          }
+        }
+      }
+    });
+  }
 
-            const lineEl = document.getElementById('line-chart');
-            if (lineEl) {
-                const lineCtx = lineEl.getContext('2d');
-                lineChart = new Chart(lineCtx, {
-                    type: 'line',
-                    data: {
-                        labels: [],
-                        datasets: [
-                            {
-                                label: 'Avg Risk Score',
-                                data: [],
-                                borderColor: '#6366f1',
-                                backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                borderWidth: 2.2,
-                                pointRadius: 2,
-                                tension: 0.35,
-                                fill: true
-                            },
-                            {
-                                label: 'Threshold (0.50)',
-                                data: [],
-                                borderColor: '#ef4444',
-                                borderWidth: 1,
-                                borderDash: [4, 4],
-                                pointRadius: 0,
-                                fill: false
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: false,
-                        scales: {
-                            x: {
-                                grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                                ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 7 }
-                            },
-                            y: {
-                                min: 0.0,
-                                max: 1.0,
-                                grid: { color: 'rgba(255, 255, 255, 0.04)' },
-                                ticks: { color: '#64748b', font: { size: 10 } }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                align: 'end',
-                                labels: {
-                                    color: '#94a3b8',
-                                    font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" },
-                                    boxWidth: 8,
-                                    padding: 8
-                                }
-                            }
-                        }
-                    }
-                });
+  const lineEl = document.getElementById('line-chart');
+  if (lineEl) {
+    const lineCtx = lineEl.getContext('2d');
+    lineChart = new Chart(lineCtx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Avg Risk Score',
+          data: [],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,.08)',
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.35,
+          fill: true,
+        }, {
+          label: 'Threshold (0.50)',
+          data: [],
+          borderColor: '#ef4444',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+              font: { family: "'Plus Jakarta Sans', sans-serif", size: 10 },
+              boxWidth: 8,
+              padding: 8
             }
+          }
+        },
+        scales: {
+          y: {
+            min: 0,
+            max: 1,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 10 } }
+          },
+          x: {
+            grid: { color: 'rgba(0,0,0,0.03)' },
+            ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 9 }, maxTicksLimit: 7 }
+          }
         }
+      }
+    });
+  }
+}
 
-        function updateCharts(stats) {
-            if (donutChart) {
-                const total = stats.total || 0;
-                const flagged = stats.flagged || 0;
-                const high = stats.high_risk || 0;
-                const blocked = stats.blocked || 0;
-                const med = Math.max(0, flagged - high - blocked);
-                const low = Math.max(0, total - flagged);
+function updateCharts(stats) {
+  if (donutChart) {
+    const cleared = stats.cleared || 0;
+    const hr      = Math.max(0, (stats.high_risk || 0) - (stats.flagged || 0));
+    const flagged = Math.max(0, (stats.flagged || 0) - (stats.blocked || 0));
+    const blocked = stats.blocked || 0;
+    donutChart.data.datasets[0].data = [cleared, hr, flagged, blocked];
+    donutChart.update('none');
 
-                donutChart.data.datasets[0].data = [low, med, high, blocked];
-                donutChart.update('none');
+    const rateBadge = document.getElementById('donut-fraud-rate');
+    if (rateBadge) rateBadge.textContent = `${(stats.fraud_rate || 0).toFixed(1)}% FRAUD RATE`;
+  }
 
-                const rateBadge = document.getElementById('donut-fraud-rate');
-                if (rateBadge) rateBadge.textContent = `${stats.fraud_rate || 0}% FRAUD RATE`;
-            }
+  if (lineChart) {
+    const now = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const curRisk = Math.max(0, Math.min(1.0, parseFloat(stats.avg_risk) || 0.0));
+    velocityHistory.push({ t: now, v: curRisk });
+    if (velocityHistory.length > MAX_VELOCITY) velocityHistory.shift();
 
-            if (lineChart) {
-                const now = new Date().toLocaleTimeString();
-                const curRisk = Math.max(0, Math.min(1.0, parseFloat(stats.avg_risk) || 0.0));
-                velocityHistory.push({ t: now, v: curRisk });
-                if (velocityHistory.length > MAX_VELOCITY) velocityHistory.shift();
+    lineChart.data.labels   = velocityHistory.map(d => d.t);
+    lineChart.data.datasets[0].data = velocityHistory.map(d => d.v);
+    lineChart.data.datasets[1].data = velocityHistory.map(() => 0.50);
+    lineChart.update('none');
 
-                lineChart.data.labels = velocityHistory.map(d => d.t);
-                lineChart.data.datasets[0].data = velocityHistory.map(d => d.v);
-                lineChart.data.datasets[1].data = velocityHistory.map(() => 0.50);
-                lineChart.update('none');
+    const statusBadge = document.getElementById('vel-status-badge');
+    if (statusBadge) {
+      if (curRisk > 0.65) {
+        statusBadge.className = 'badge badge-red';
+        statusBadge.textContent = '● SPIKE ALERT';
+      } else if (curRisk > 0.40) {
+        statusBadge.className = 'badge badge-amber';
+        statusBadge.textContent = '● ELEVATED';
+      } else {
+        statusBadge.className = 'badge badge-green';
+        statusBadge.textContent = '● STREAM ACTIVE';
+      }
+    }
+  }
+}
 
-                const statusBadge = document.getElementById('vel-status-badge');
-                if (statusBadge) {
-                    if (curRisk > 0.65) {
-                        statusBadge.className = 'badge-pill badge-danger';
-                        statusBadge.innerHTML = '<span class="pulse-dot dot-red"></span> SPIKE ALERT';
-                    } else if (curRisk > 0.40) {
-                        statusBadge.className = 'badge-pill badge-medium';
-                        statusBadge.innerHTML = '<span class="pulse-dot dot-yellow"></span> ELEVATED';
-                    } else {
-                        statusBadge.className = 'badge-pill badge-safe';
-                        statusBadge.innerHTML = '<span class="pulse-dot dot-green"></span> STREAM NORMAL';
-                    }
-                }
-            }
+// ══════════════════════════════════════════════════════════
+// Stats + Table Refresh
+// ══════════════════════════════════════════════════════════
+async function fetchStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+
+    document.getElementById('kpi-total').textContent   = s.total    || 0;
+    document.getElementById('kpi-flagged').textContent = s.flagged  || 0;
+    document.getElementById('kpi-highrisk').textContent= s.high_risk|| 0;
+    document.getElementById('kpi-blocked').textContent = s.blocked  || 0;
+    document.getElementById('kpi-fraud-rate').textContent = `${(s.fraud_rate||0).toFixed(1)}% fraud rate`;
+    document.getElementById('kpi-avg-risk').textContent   = `Avg risk: ${(s.avg_risk||0).toFixed(3)}`;
+    document.getElementById('kpi-frozen-count').textContent = `Frozen: ${s.frozen_count||0}`;
+    document.getElementById('alerts-count-badge').textContent = s.flagged || 0;
+    document.getElementById('frozen-count-badge').textContent  = s.frozen_count || 0;
+
+    updateCharts(s);
+    updateHeaderFrozenCount(s.frozen_count);
+  } catch(e) { /* server not ready */ }
+}
+
+function updateHeaderFrozenCount(n) {
+  fetch('/api/accounts/frozen').then(r=>r.json()).then(d => {
+    const c = d.count || 0;
+    document.getElementById('frozen-header-count').textContent = `❄️ Frozen: ${c}`;
+    document.getElementById('frozen-count-badge').textContent  = c;
+  }).catch(()=>{});
+}
+
+async function fetchTransactions() {
+  if (isPaused) return;
+  try {
+    const r = await fetch('/api/transactions/live?limit=200');
+    const d = await r.json();
+
+    // Detect new high-risk transactions
+    const newTxns = d.transactions || [];
+    if (allTransactions.length > 0 && newTxns.length > 0) {
+      const knownIds = new Set(allTransactions.map(t => t.TransactionID));
+      newTxns.forEach(t => {
+        if (!knownIds.has(t.TransactionID)) {
+          const risk = parseFloat(t.RiskScore || 0);
+          if (risk >= 0.5 || t.IsBlocked) showToast(t);
         }
+      });
+    }
 
-        // ── Audio Alert System (Web Audio API) ────────────────────────────────
-        let audioCtx = null;
-        function getAudioContext() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            return audioCtx;
-        }
+    allTransactions = newTxns;
+    renderTable();
+    if (currentView() === 'alerts') renderAlertsTable();
+  } catch(e) { /* silent */ }
+}
 
-        function playAlertChime() {
-            if (!soundAlertsEnabled) return;
-            try {
-                const ctx = getAudioContext();
-                const now = ctx.currentTime;
-                const osc1 = ctx.createOscillator();
-                const osc2 = ctx.createOscillator();
-                const gain = ctx.createGain();
+function currentView() {
+  const active = document.querySelector('.nav-item.active');
+  if (!active) return 'dashboard';
+  return active.id.replace('nav-','');
+}
 
-                osc1.type = 'triangle';
-                osc2.type = 'sine';
-                osc1.frequency.setValueAtTime(880, now);
-                osc1.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
-                osc2.frequency.setValueAtTime(440, now);
+// ══════════════════════════════════════════════════════════
+// Table Rendering with Structured Pagination
+// ══════════════════════════════════════════════════════════
+let currentPage = 1;
+let pageSize = 15;
 
-                gain.gain.setValueAtTime(0.12, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+function renderTable() {
+  const tbody = document.getElementById('live-tbody');
+  let filtered = allTransactions;
 
-                osc1.connect(gain);
-                osc2.connect(gain);
-                gain.connect(ctx.destination);
+  // Filter
+  if (currentFilter === 'highrisk')  filtered = filtered.filter(t => parseFloat(t.RiskScore||0) >= 0.7);
+  else if (currentFilter === 'flagged') filtered = filtered.filter(t => t.IsFraud);
+  else if (currentFilter === 'blocked') filtered = filtered.filter(t => t.IsBlocked || t.Status === 'BLOCKED');
+  else if (currentFilter === 'cleared') filtered = filtered.filter(t => t.Status === 'Cleared');
 
-                osc1.start(now);
-                osc2.start(now);
-                osc1.stop(now + 0.35);
-                osc2.stop(now + 0.35);
-            } catch (e) {
-                console.warn('Audio chime notice:', e);
-            }
-        }
+  // Search
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(t =>
+      (t.AccountID||'').toLowerCase().includes(q) ||
+      (t.Location||'').toLowerCase().includes(q) ||
+      (t.TransactionID||'').toLowerCase().includes(q) ||
+      (t.TransactionType||'').toLowerCase().includes(q)
+    );
+  }
 
-        function toggleSoundAlerts() {
-            soundAlertsEnabled = !soundAlertsEnabled;
-            const icon = document.getElementById('soundIcon');
-            const label = document.getElementById('soundLabel');
-            if (soundAlertsEnabled) {
-                icon.className = 'bi bi-volume-up-fill text-success';
-                label.textContent = 'Sound ON';
-                playAlertChime();
-            } else {
-                icon.className = 'bi bi-volume-mute-fill text-muted';
-                label.textContent = 'Sound OFF';
-            }
-        }
+  const totalFiltered = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
 
-        // ── DEDICATED IN-PAGE THREAT ALERTS SECTION (NO POPUPS) ────────────────
-        function logThreatAlert(t) {
-            if (seenThreatTxnIds.has(t.id)) return;
-            seenThreatTxnIds.add(t.id);
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
 
-            threatAlertsFeed.unshift(t);
-            if (threatAlertsFeed.length > 40) threatAlertsFeed.pop();
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalFiltered);
+  const pagedItems = filtered.slice(startIndex, endIndex);
 
-            playAlertChime();
-            renderThreatAlertsFeed();
-        }
+  // Update pagination controls
+  const pageInfo = document.getElementById('pagination-info');
+  if (pageInfo) {
+    pageInfo.innerHTML = totalFiltered > 0
+      ? `Showing <strong>${startIndex + 1}–${endIndex}</strong> of <strong>${totalFiltered}</strong> transactions`
+      : `Showing <strong>0</strong> transactions`;
+  }
+  const pageIndicator = document.getElementById('page-indicator');
+  if (pageIndicator) pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
 
-        function dismissThreatAlert(txnId) {
-            const idx = threatAlertsFeed.findIndex(t => t.id === txnId);
-            if (idx !== -1) {
-                threatAlertsFeed.splice(idx, 1);
-                renderThreatAlertsFeed();
-            }
-        }
+  const btnFirst = document.getElementById('btn-first');
+  const btnPrev  = document.getElementById('btn-prev');
+  const btnNext  = document.getElementById('btn-next');
+  const btnLast  = document.getElementById('btn-last');
 
-        function clearAlertsFeed() {
-            threatAlertsFeed.length = 0;
-            renderThreatAlertsFeed();
-        }
+  if (btnFirst) btnFirst.disabled = (currentPage === 1);
+  if (btnPrev)  btnPrev.disabled  = (currentPage === 1);
+  if (btnNext)  btnNext.disabled  = (currentPage === totalPages || totalFiltered === 0);
+  if (btnLast)  btnLast.disabled  = (currentPage === totalPages || totalFiltered === 0);
 
-        function renderThreatAlertsFeed() {
-            const container = document.getElementById('alerts-feed-list');
-            const counter = document.getElementById('threat-feed-counter');
-            const sidebarCounter = document.getElementById('sidebar-alerts-count');
+  if (!pagedItems.length) {
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-msg">No transactions match the current filter</div></div></td></tr>`;
+    return;
+  }
 
-            if (counter) counter.textContent = `${threatAlertsFeed.length} Threat${threatAlertsFeed.length === 1 ? '' : 's'}`;
-            if (sidebarCounter) sidebarCounter.textContent = threatAlertsFeed.length;
+  tbody.innerHTML = pagedItems.map((t, idx) => {
+    const risk    = parseFloat(t.RiskScore || 0);
+    const isBlk   = t.IsBlocked || t.Status === 'BLOCKED';
+    const riskCls = risk >= 0.7 ? 'risk-critical' : (risk >= 0.5 ? 'risk-high' : (risk >= 0.3 ? 'risk-medium' : 'risk-low'));
+    const statusBadge = isBlk
+      ? '<span class="badge badge-blue">🔒 BLOCKED</span>'
+      : (t.IsFraud
+        ? '<span class="badge badge-red">🚨 FLAGGED</span>'
+        : (t.IsHighRisk
+          ? '<span class="badge badge-amber">⚠️ HIGH RISK</span>'
+          : '<span class="badge badge-green">✅ Cleared</span>'));
 
-            if (!container) return;
+    const time = t.Timestamp ? new Date(t.Timestamp).toLocaleTimeString('en-US', {hour12:false}) : '—';
+    const rowCls = isBlk ? 'class="row-blocked"' : (idx === 0 && currentPage === 1 ? 'class="row-new"' : '');
 
-            if (threatAlertsFeed.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-5 text-muted" id="alerts-empty-state">
-                        <i class="bi bi-shield-check text-success fs-1 mb-2 d-block"></i>
-                        <div class="fw-bold text-light">No Active Threat Alerts</div>
-                        <div class="small mt-1 text-muted">Continuous real-time anomaly surveillance active. Detected fraud threats appear here automatically without intrusive popups.</div>
-                    </div>
-                `;
-                return;
-            }
+    return `<tr ${rowCls} onclick='openAuditModal(${JSON.stringify(t)})'>
+      <td><span style="font-family:monospace;font-size:11px;color:#64748b;">${(t.TransactionID||'—').slice(-10)}</span></td>
+      <td><strong>${t.AccountID||'—'}</strong></td>
+      <td><strong>$${parseFloat(t.TransactionAmount||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></td>
+      <td><span class="text-sm text-secondary">${(t.TransactionType||'?').slice(0,16)}</span></td>
+      <td>${t.Location||'?'}</td>
+      <td><span class="risk-pill ${riskCls}">${risk.toFixed(3)}</span></td>
+      <td><span class="text-xs text-muted">${(parseFloat(t.XGBScore||0)).toFixed(3)}</span></td>
+      <td><span class="text-xs text-muted">${(parseFloat(t.GNNScore||0)).toFixed(3)}</span></td>
+      <td><span class="text-xs text-muted">${(parseFloat(t.IsoScore||0)).toFixed(3)}</span></td>
+      <td>${statusBadge}</td>
+      <td><span class="text-xs text-muted">${time}</span></td>
+      <td onclick="event.stopPropagation()">
+        ${isBlk
+          ? `<button class="btn btn-outline btn-sm" onclick="unfreezeAccount('${t.AccountID}')">🔓 Unfreeze</button>`
+          : `<button class="btn btn-danger btn-sm" onclick="quickFreeze('${t.AccountID}')">🔒 Freeze</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
 
-            container.innerHTML = threatAlertsFeed.map(t => {
-                const isCritical = (t.RiskScore || 0) > 0.7 || t.IsFraud;
-                const timeStr = t.Timestamp ? t.Timestamp.split(' ')[1] || t.Timestamp : new Date().toLocaleTimeString();
-                const scoreVal = (t.RiskScore || 0).toFixed(3);
-                const isBlocked = t.Status === 'BLOCKED' || t.IsFrozen;
+function changePageSize(val) {
+  pageSize = parseInt(val) || 15;
+  currentPage = 1;
+  renderTable();
+}
 
-                return `
-                    <div class="threat-alert-card ${isCritical ? 'threat-high' : 'threat-med'}">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <span class="badge-pill ${isBlocked ? 'badge-blocked' : isCritical ? 'badge-danger' : 'badge-medium'}">
-                                <i class="bi bi-shield-exclamation"></i> ${isBlocked ? 'BLOCKED TRANSACTION' : isCritical ? 'HIGH THREAT DETECTED' : 'SUSPICIOUS ACTIVITY'}
-                            </span>
-                            <span class="font-monospace small text-muted">${timeStr}</span>
-                        </div>
-                        <div class="d-flex align-items-baseline justify-content-between my-1">
-                            <div>
-                                <span class="code-acc">${t.AccountID}</span>
-                                <span class="fw-bold text-white ms-2">$${parseFloat(t.TransactionAmount || 0).toFixed(2)}</span>
-                            </div>
-                            <span class="font-monospace fw-bold ${isCritical ? 'text-danger' : 'text-warning'}">
-                                Risk: ${scoreVal}
-                            </span>
-                        </div>
-                        <div class="small text-muted">
-                            <i class="bi bi-geo-alt"></i> ${t.Location || 'Unknown'} &bull; ${t.TransactionType || 'Debit'} &bull; Indicator: <span class="text-light">${t.TopFeature || 'Multi-model anomaly'}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 mt-2 pt-1 border-top border-secondary border-opacity-25">
-                            <button class="btn btn-danger btn-sm py-0 px-2" style="font-size: 0.72rem;" onclick="toggleFreezeAccount('${t.AccountID}', true)">
-                                <i class="bi bi-shield-slash-fill"></i> Freeze
-                            </button>
-                            <button class="btn btn-outline-light btn-sm py-0 px-2" style="font-size: 0.72rem;" onclick="showTransactionDetail(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-                                <i class="bi bi-search"></i> Inspect
-                            </button>
-                            <button class="btn btn-outline-secondary btn-sm py-0 px-1 ms-auto" style="font-size: 0.72rem;" title="Dismiss alert" onclick="dismissThreatAlert(${t.id})">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
+function goToPage(p) {
+  currentPage = p;
+  renderTable();
+}
 
-        // ── Main Polling Routine ──────────────────────────────────────────────
-        async function fetchAndRender() {
-            try {
-                // Pass ?since=lastSeenId so the server returns ONLY new rows,
-                // not the same 50 newest items every poll (fixes buffer-full freeze).
-                const sinceParam = isInitialLoad ? '' : `&since=${lastSeenId}`;
-                const [txnRes, statsRes] = await Promise.all([
-                    fetch(`/api/live-transactions?limit=50${sinceParam}`),
-                    fetch('/api/stats')
-                ]);
-                if (!txnRes.ok || !statsRes.ok) return;
-                const txns = await txnRes.json();
-                const stats = await statsRes.json();
+function prevPage() {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+}
 
-                updateKPICards(stats);
-                populateTransactionsTable(txns);
-                updateCharts(stats);
-                isInitialLoad = false;
-            } catch (e) {
-                console.warn('Poll error:', e);
-            }
-        }
+function nextPage() {
+  currentPage++;
+  renderTable();
+}
 
-        // ── KPI Updates ───────────────────────────────────────────────────────
-        function updateKPICards(stats) {
-            document.getElementById('total-transactions').textContent = stats.total;
-            document.getElementById('flagged-transactions').textContent = stats.flagged;
-            document.getElementById('high-risk').textContent = stats.high_risk;
-            document.getElementById('avg-risk').textContent = Number(stats.avg_risk).toFixed(3);
+function goToLastPage() {
+  let filtered = allTransactions;
+  if (currentFilter === 'highrisk')  filtered = filtered.filter(t => parseFloat(t.RiskScore||0) >= 0.7);
+  else if (currentFilter === 'flagged') filtered = filtered.filter(t => t.IsFraud);
+  else if (currentFilter === 'blocked') filtered = filtered.filter(t => t.IsBlocked || t.Status === 'BLOCKED');
+  else if (currentFilter === 'cleared') filtered = filtered.filter(t => t.Status === 'Cleared');
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  currentPage = totalPages;
+  renderTable();
+}
 
-            const frozenCount = stats.frozen_count !== undefined ? stats.frozen_count : (stats.frozen || 0);
-            const frozenBadge = document.getElementById('frozen-count-badge');
-            const sidebarFrozen = document.getElementById('sidebar-frozen-count');
-            const frozenSub = document.getElementById('frozen-sub-count');
-            const frozenPulse = document.getElementById('frozen-pulse');
+function setFilter(f, el) {
+  currentFilter = f;
+  currentPage = 1;
+  document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
 
-            if (frozenBadge) frozenBadge.textContent = frozenCount;
-            if (sidebarFrozen) sidebarFrozen.textContent = frozenCount;
-            if (frozenSub) frozenSub.textContent = frozenCount;
-            if (frozenPulse) {
-                frozenPulse.className = 'pulse-dot ' + (frozenCount > 0 ? 'dot-red' : 'dot-green');
-            }
+function filterTable() {
+  searchQuery = document.getElementById('txn-search').value;
+  currentPage = 1;
+  renderTable();
+}
 
-            const trendElem = document.getElementById('risk-trend');
-            if (stats.avg_risk > 0.45) {
-                trendElem.className = 'stat-subtext text-danger';
-                trendElem.innerHTML = `<i class="bi bi-arrow-up-right"></i> Elevated (${stats.fraud_rate}% fraud rate)`;
-            } else {
-                trendElem.className = 'stat-subtext text-success';
-                trendElem.innerHTML = `<i class="bi bi-check2-circle"></i> Normal (${stats.fraud_rate}% fraud rate)`;
-            }
-        }
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pause-btn');
+  btn.textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+  btn.classList.toggle('pause-btn-active', isPaused);
+}
 
-        // ── Table Rendering ───────────────────────────────────────────────────
-        function populateTransactionsTable(data) {
-            const tableBody = document.getElementById('transactions-table');
-            if (!tableBody) return;
+// ══════════════════════════════════════════════════════════
+// Alerts Table
+// ══════════════════════════════════════════════════════════
+function refreshAlerts() {
+  fetch('/api/transactions/live?limit=200')
+    .then(r => r.json())
+    .then(d => {
+      const flagged = (d.transactions||[]).filter(t => t.IsFraud || t.IsBlocked || parseFloat(t.RiskScore||0) >= 0.5);
+      renderAlertsTable(flagged);
+    });
+}
 
-            const newTxns = data.filter(t => t.id > lastSeenId);
-            if (data.length > 0) lastSeenId = Math.max(...data.map(t => t.id));
+function renderAlertsTable(txns) {
+  txns = txns || allTransactions.filter(t => t.IsFraud || t.IsBlocked || parseFloat(t.RiskScore||0) >= 0.5);
+  const tbody = document.getElementById('alerts-tbody');
 
-            // Log new high-risk arrivals into dedicated Threat Feed
-            if (!isInitialLoad && newTxns.length > 0) {
-                newTxns.filter(t => (t.RiskScore > 0.7 || t.IsFraud) && !t.IsFrozen).forEach(t => {
-                    logThreatAlert(t);
-                });
-            } else if (isInitialLoad && data.length > 0) {
-                data.filter(t => (t.RiskScore > 0.7 || t.IsFraud)).slice(0, 5).forEach(t => {
-                    logThreatAlert(t);
-                });
-            }
+  if (!txns.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-msg">No flagged incidents</div></div></td></tr>`;
+    return;
+  }
 
-            tableBody.innerHTML = '';
-            data.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.addEventListener('click', () => showTransactionDetail(t));
+  tbody.innerHTML = txns.slice(0,80).map((t,i) => {
+    const risk = parseFloat(t.RiskScore || 0);
+    const sev  = t.IsBlocked ? '<span class="badge badge-blue">BLOCKED</span>'
+               : risk >= 0.85 ? '<span class="badge badge-red">CRITICAL</span>'
+               : risk >= 0.70 ? '<span class="badge badge-amber">ELEVATED</span>'
+               : '<span class="badge badge-gray">FLAGGED</span>';
+    const driver = t.SHAPDrivers && t.SHAPDrivers[0] ? t.SHAPDrivers[0].feature : '—';
+    const time = t.Timestamp ? new Date(t.Timestamp).toLocaleTimeString('en-US',{hour12:false}) : '—';
+    return `<tr onclick='openAuditModal(${JSON.stringify(t)})'>
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="alert-check" data-account="${t.AccountID}" /></td>
+      <td style="font-family:monospace;font-size:11px;">${(t.TransactionID||'—').slice(-10)}</td>
+      <td><strong>${t.AccountID||'—'}</strong></td>
+      <td><strong>$${parseFloat(t.TransactionAmount||0).toLocaleString('en-US',{minimumFractionDigits:2})}</strong></td>
+      <td><span class="risk-pill ${risk>=0.7?'risk-critical':'risk-high'}">${risk.toFixed(3)}</span></td>
+      <td>${t.Location||'?'}</td>
+      <td>${sev}</td>
+      <td><span class="text-xs text-muted">${driver}</span></td>
+      <td><span class="text-xs text-muted">${time}</span></td>
+      <td onclick="event.stopPropagation()">
+        <button class="btn btn-danger btn-sm" onclick="quickFreeze('${t.AccountID}')">🔒 Freeze</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
 
-                const score = t.RiskScore || 0;
-                const isBlocked = t.Status === 'BLOCKED' || t.IsFrozen;
+function toggleAllAlerts(cb) {
+  document.querySelectorAll('.alert-check').forEach(c => c.checked = cb.checked);
+}
 
-                let badgeHtml = '';
-                if (isBlocked) {
-                    badgeHtml = '<span class="badge-pill badge-blocked"><i class="bi bi-slash-circle"></i> BLOCKED</span>';
-                } else if (score > 0.7) {
-                    badgeHtml = `<span class="badge-pill badge-danger"><i class="bi bi-exclamation-circle-fill"></i> ${score.toFixed(3)}</span>`;
-                } else if (score > 0.4) {
-                    badgeHtml = `<span class="badge-pill badge-medium">${score.toFixed(3)}</span>`;
-                } else {
-                    badgeHtml = `<span class="badge-pill badge-safe">${score.toFixed(3)}</span>`;
-                }
+function batchFreezeSelected() {
+  const checks = document.querySelectorAll('.alert-check:checked');
+  const accounts = [...checks].map(c => c.dataset.account);
+  if (!accounts.length) { showNotification('No accounts selected', 'error'); return; }
+  const unique = [...new Set(accounts)];
+  Promise.all(unique.map(id => fetch('/api/accounts/freeze', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ account_id: id, reason: 'Batch freeze — incident triage' })
+  }))).then(() => {
+    showNotification(`${unique.length} account(s) frozen`, 'success');
+    updateHeaderFrozenCount();
+    refreshAlerts();
+  });
+}
 
-                const statusPill = isBlocked 
-                    ? '<span class="text-danger fw-bold">Frozen</span>' 
-                    : t.IsFraud 
-                    ? '<span class="text-danger fw-bold">Flagged</span>' 
-                    : '<span class="text-success">Cleared</span>';
+// ══════════════════════════════════════════════════════════
+// Audit Modal
+// ══════════════════════════════════════════════════════════
+function openAuditModal(txn) {
+  if (typeof txn === 'string') txn = JSON.parse(txn);
+  currentModalTxn = txn;
+  const risk = parseFloat(txn.RiskScore || 0);
 
-                const freezeBtn = isBlocked
-                    ? `<button class="btn btn-outline-success btn-sm py-0 px-2" style="font-size: 0.72rem;" title="Unfreeze" onclick="event.stopPropagation(); toggleFreezeAccount('${t.AccountID}', false)">
-                        <i class="bi bi-unlock-fill"></i> Unfreeze
-                       </button>`
-                    : `<button class="btn btn-outline-danger btn-sm py-0 px-2" style="font-size: 0.72rem;" title="Freeze" onclick="event.stopPropagation(); toggleFreezeAccount('${t.AccountID}', true)">
-                        <i class="bi bi-shield-slash-fill"></i> Freeze
-                       </button>`;
+  document.getElementById('modal-txn-id').textContent = `🔍 ${txn.TransactionID || 'Unknown'} — Deep Audit`;
+  document.getElementById('modal-timestamp').textContent = txn.Timestamp || '—';
+  document.getElementById('modal-freeze-btn').textContent = txn.IsBlocked ? '🔓 Unfreeze Account' : '🔒 Freeze Account';
+  document.getElementById('modal-freeze-btn').onclick = txn.IsBlocked ? () => unfreezeFromModal() : () => freezeFromModal();
 
-                tr.innerHTML = `
-                    <td class="font-monospace text-muted">${t.TransactionID}</td>
-                    <td>
-                        <span class="code-acc">${t.AccountID}</span>
-                        ${isBlocked ? '<i class="bi bi-lock-fill text-danger ms-1" title="Account Frozen"></i>' : ''}
-                    </td>
-                    <td class="font-monospace fw-bold text-white">$${parseFloat(t.TransactionAmount).toFixed(2)}</td>
-                    <td>${t.TransactionType}</td>
-                    <td>${t.Location}</td>
-                    <td>${badgeHtml}</td>
-                    <td>${statusPill}</td>
-                    <td style="text-align: right;">
-                        <button class="btn btn-outline-primary btn-sm py-0 px-2 me-1" style="font-size: 0.72rem;" onclick="event.stopPropagation(); showTransactionDetail(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-                            <i class="bi bi-search"></i>
-                        </button>
-                        ${freezeBtn}
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
+  // Meta grid
+  const meta = [
+    ['Account ID', txn.AccountID||'—'], ['Customer ID', txn.CustomerID||'—'],
+    ['Amount', `$${parseFloat(txn.TransactionAmount||0).toLocaleString('en-US',{minimumFractionDigits:2})}`],
+    ['Balance', `$${parseFloat(txn.AccountBalance||0).toLocaleString('en-US',{minimumFractionDigits:2})}`],
+    ['Type', txn.TransactionType||'—'], ['Location', txn.Location||'—'],
+    ['Merchant', txn.MerchantID||'—'], ['Device', txn.DeviceID||'—'],
+    ['Login Attempts', txn.LoginAttempts||'—'], ['Duration', `${txn.TransactionDuration||0}s`],
+    ['Status', txn.Status||'—'], ['Risk Tier', txn.RiskTier||'—'],
+  ];
+  document.getElementById('modal-meta-grid').innerHTML = meta.map(([l,v]) =>
+    `<div><div class="text-xs text-muted">${l}</div><div class="font-semibold text-sm" style="margin-top:3px;">${v}</div></div>`
+  ).join('');
 
-        // ── Vis-Network Graph ─────────────────────────────────────────────────
-        function initNetworkGraph() {
-            const container = document.getElementById('network-graph');
-            const nodes = new vis.DataSet([
-                { id: 1, label: 'AC00128', group: 'account' },
-                { id: 2, label: 'M_Amazon', group: 'merchant' },
-                { id: 3, label: 'Dev_iPhone15', group: 'device' }
-            ]);
-            const edges = new vis.DataSet([
-                { from: 1, to: 2, label: '$240.00' },
-                { from: 1, to: 3, label: 'Session' }
-            ]);
-            const options = {
-                nodes: {
-                    shape: 'dot',
-                    size: 15,
-                    font: { size: 11, color: '#f1f5f9', face: 'Plus Jakarta Sans' },
-                    borderWidth: 2
-                },
-                edges: {
-                    width: 1.5,
-                    color: { color: 'rgba(255,255,255,0.2)', highlight: '#6366f1' },
-                    font: { size: 9, color: '#94a3b8', align: 'horizontal' },
-                    arrows: { to: { enabled: true, scaleFactor: 0.5 } }
-                },
-                groups: {
-                    account:  { color: { background: '#6366f1', border: '#818cf8' } },
-                    merchant: { color: { background: '#10b981', border: '#34d399' } },
-                    device:   { color: { background: '#f59e0b', border: '#fbbf24' } }
-                },
-                physics: {
-                    barnesHut: { springLength: 80, gravitationalConstant: -1800 }
-                }
-            };
-            network = new vis.Network(container, { nodes, edges }, options);
-        }
+  // Model scores
+  const scores = [
+    { label: 'XGBoost', val: txn.XGBScore||0, cls: 'risk-high' },
+    { label: 'GNN', val: txn.GNNScore||0, cls: 'risk-medium' },
+    { label: 'IsoForest', val: txn.IsoScore||0, cls: 'risk-medium' },
+    { label: 'Composite', val: txn.RiskScore||0, cls: risk>=0.7?'risk-critical':'risk-high' },
+  ];
+  document.getElementById('modal-scores-grid').innerHTML = scores.map(s =>
+    `<div class="card" style="text-align:center;padding:14px;">
+      <div class="text-xs text-muted mb-8">${s.label}</div>
+      <div class="risk-pill ${s.cls}" style="font-size:16px;padding:6px 14px;">${parseFloat(s.val).toFixed(3)}</div>
+    </div>`
+  ).join('');
 
-        function updateNetworkGraph(accId, merchId, devId, amount) {
-            if (!network) return;
-            const nodes = network.body.data.nodes;
-            const edges = network.body.data.edges;
+  // SHAP bars
+  renderSHAPBars(txn.SHAPDrivers || [], 'modal-shap-bars');
 
-            const accNodeId = 'acc_' + accId;
-            const merchNodeId = 'merch_' + merchId;
-            const devNodeId = 'dev_' + devId;
+  document.getElementById('audit-modal').classList.add('open');
+}
 
-            if (!nodes.get(accNodeId)) nodes.add({ id: accNodeId, label: accId, group: 'account' });
-            if (!nodes.get(merchNodeId)) nodes.add({ id: merchNodeId, label: merchId, group: 'merchant' });
-            if (!nodes.get(devNodeId)) nodes.add({ id: devNodeId, label: devId, group: 'device' });
+function freezeFromModal() {
+  if (!currentModalTxn) return;
+  quickFreeze(currentModalTxn.AccountID);
+  closeModal('audit-modal');
+}
 
-            edges.add([
-                { from: accNodeId, to: merchNodeId, label: '$' + parseFloat(amount).toFixed(0) },
-                { from: accNodeId, to: devNodeId, label: 'Active' }
-            ]);
-        }
+function unfreezeFromModal() {
+  if (!currentModalTxn) return;
+  unfreezeAccount(currentModalTxn.AccountID);
+  closeModal('audit-modal');
+}
 
-        // ── Transaction Detail Modal ──────────────────────────────────────────
-        function showTransactionDetail(t) {
-            currentDetailTxn = t;
-            const detail = document.getElementById('transaction-detail');
-            const score = t.RiskScore || 0;
-            const isBlocked = t.Status === 'BLOCKED' || t.IsFrozen;
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
 
-            const freezeBtn = document.getElementById('detail-freeze-btn');
-            if (freezeBtn) {
-                freezeBtn.className = isBlocked ? 'btn btn-success btn-sm' : 'btn btn-danger btn-sm';
-                freezeBtn.innerHTML = isBlocked ? '<i class="bi bi-unlock-fill me-1"></i> Unfreeze Account' : '<i class="bi bi-shield-slash-fill me-1"></i> Freeze Account';
-            }
+// ══════════════════════════════════════════════════════════
+// SHAP Bars
+// ══════════════════════════════════════════════════════════
+function renderSHAPBars(drivers, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container || !drivers.length) {
+    if (container) container.innerHTML = '<div class="text-sm text-muted">No SHAP data available</div>';
+    return;
+  }
 
-            detail.innerHTML = `
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);">
-                            <div class="text-muted small">Transaction ID</div>
-                            <div class="font-monospace fw-bold text-white fs-5">${t.TransactionID}</div>
-                            <div class="mt-2 text-muted small">Account ID</div>
-                            <div class="code-acc d-inline-block">${t.AccountID}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);">
-                            <div class="text-muted small">Risk Assessment</div>
-                            <div class="d-flex align-items-baseline gap-2">
-                                <span class="font-monospace fw-bold fs-4 ${score > 0.7 ? 'text-danger' : score > 0.4 ? 'text-warning' : 'text-success'}">
-                                    ${score.toFixed(3)}
-                                </span>
-                                <span class="badge-pill ${isBlocked ? 'badge-blocked' : score > 0.7 ? 'badge-danger' : 'badge-safe'}">
-                                    ${isBlocked ? 'BLOCKED' : score > 0.7 ? 'HIGH THREAT' : 'LOW RISK'}
-                                </span>
-                            </div>
-                            <div class="mt-2 text-muted small">Primary Anomaly Trigger: <span class="text-white">${t.TopFeature || 'N/A'}</span></div>
-                        </div>
-                    </div>
-                </div>
+  const maxVal = Math.max(...drivers.map(d => Math.abs(d.shap_value||0)), 0.001);
+  container.innerHTML = drivers.map(d => {
+    const abs = Math.abs(d.shap_value || 0);
+    const pct = Math.min((abs / maxVal) * 100, 100);
+    const pos = (d.shap_value || 0) > 0;
+    const val = parseFloat(d.value || 0);
+    return `
+      <div class="shap-row">
+        <div class="shap-feat" title="${d.feature}">${d.feature}</div>
+        <div class="shap-bar-track">
+          <div class="shap-bar-fill ${pos?'shap-positive':'shap-negative'}" style="width:${pct}%"></div>
+        </div>
+        <div class="shap-val">${pos?'+':''}${(d.shap_value||0).toFixed(4)}</div>
+      </div>`;
+  }).join('');
+}
 
-                <div class="row g-2 text-muted small mb-3">
-                    <div class="col-4"><strong>Amount:</strong> <span class="text-white font-monospace">$${parseFloat(t.TransactionAmount).toFixed(2)}</span></div>
-                    <div class="col-4"><strong>Type:</strong> <span class="text-white">${t.TransactionType}</span></div>
-                    <div class="col-4"><strong>Channel:</strong> <span class="text-white">${t.Channel || 'Online'}</span></div>
-                    <div class="col-4"><strong>Location:</strong> <span class="text-white">${t.Location}</span></div>
-                    <div class="col-4"><strong>Device:</strong> <span class="text-white">${t.DeviceID || 'N/A'}</span></div>
-                    <div class="col-4"><strong>Merchant:</strong> <span class="text-white">${t.MerchantID || 'N/A'}</span></div>
-                </div>
+// ══════════════════════════════════════════════════════════
+// Custom Evaluator
+// ══════════════════════════════════════════════════════════
+async function runEvaluator() {
+  const payload = {
+    AccountID:           document.getElementById('eval-account').value || 'AC00TEST',
+    CustomerID:          document.getElementById('eval-account').value || 'CUS00TEST',
+    TransactionAmount:   parseFloat(document.getElementById('eval-amount').value) || 0,
+    AccountBalance:      parseFloat(document.getElementById('eval-balance').value) || 0,
+    TransactionType:     document.getElementById('eval-type').value,
+    Location:            document.getElementById('eval-location').value,
+    LoginAttempts:       parseInt(document.getElementById('eval-logins').value) || 1,
+    TransactionDuration: parseFloat(document.getElementById('eval-duration').value) || 60,
+    DeviceID:            document.getElementById('eval-device').value,
+    MerchantID:          'M_EVAL',
+    Timestamp:           new Date().toISOString(),
+  };
 
-                <div class="p-2 rounded font-monospace small" style="background: #0d121f; border: 1px solid var(--border-subtle);">
-                    <div class="text-muted mb-1">Model Probabilities:</div>
-                    <div class="d-flex justify-content-between">
-                        <span>XGBoost: <strong class="text-info">${(t.XGBProb||0).toFixed(3)}</strong></span>
-                        <span>Isolation Forest: <strong class="text-warning">${(t.IsoScore||0).toFixed(3)}</strong></span>
-                        <span>GNN Topological: <strong class="text-primary">${(t.GNNProb||0).toFixed(3)}</strong></span>
-                    </div>
-                </div>
-            `;
-            txnModal.show();
-        }
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    showEvalResult(d);
+  } catch(e) {
+    showNotification('Connection error — is the server running?', 'error');
+  }
+}
 
-        async function generateSARForCurrent() {
-            if (!currentDetailTxn) return;
-            try {
-                const reportData = {
-                    transactions: [currentDetailTxn],
-                    customer_info: {
-                        name: 'Account Holder ' + currentDetailTxn.AccountID,
-                        account_id: currentDetailTxn.AccountID,
-                        risk_score: currentDetailTxn.RiskScore || 0.8
-                    }
-                };
-                const blob = await (await fetch('/api/reports/sar', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(reportData)
-                })).blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url;
-                a.download = `SAR_${currentDetailTxn.AccountID}_${new Date().toISOString().split('T')[0]}.pdf`;
-                document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
-            } catch(err) {
-                alert('SAR report generation failed: ' + err.message);
-            }
-        }
+function showEvalResult(d) {
+  const risk = parseFloat(d.risk_score || 0);
+  const panel = document.getElementById('eval-result');
+  panel.style.display = 'block';
 
-        // ── Feature 2: Account Freeze Interception ────────────────────────────
-        async function toggleFreezeAccount(accountId, shouldFreeze, reason = 'Incident Response Action') {
-            const endpoint = shouldFreeze 
-                ? `/api/account/${encodeURIComponent(accountId)}/freeze` 
-                : `/api/account/${encodeURIComponent(accountId)}/unfreeze`;
-            try {
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ reason })
-                });
-                const d = await res.json();
-                if (d.success) {
-                    fetchAndRender();
-                    loadFrozenAccounts();
-                } else {
-                    alert('Error: ' + (d.error || 'Failed to update account status'));
-                }
-            } catch (err) {
-                alert('Request failed: ' + err.message);
-            }
-        }
+  document.getElementById('eval-risk-val').textContent = risk.toFixed(3);
+  document.getElementById('eval-risk-val').style.color =
+    risk >= 0.7 ? '#ef4444' : (risk >= 0.5 ? '#f59e0b' : '#10b981');
 
-        async function toggleFreezeCurrentDetail() {
-            if (!currentDetailTxn || !currentDetailTxn.AccountID) return;
-            const isFrozen = currentDetailTxn.IsFrozen || currentDetailTxn.Status === 'BLOCKED';
-            await toggleFreezeAccount(currentDetailTxn.AccountID, !isFrozen);
-            currentDetailTxn.IsFrozen = !isFrozen;
-            currentDetailTxn.Status = !isFrozen ? 'BLOCKED' : (currentDetailTxn.IsFraud ? 'Flagged' : 'Cleared');
-            showTransactionDetail(currentDetailTxn);
-        }
+  const statusMap = {
+    'BLOCKED': '<span class="badge badge-blue">🔒 BLOCKED</span>',
+    'FLAGGED': '<span class="badge badge-red">🚨 FLAGGED</span>',
+    'HIGH RISK': '<span class="badge badge-amber">⚠️ HIGH RISK</span>',
+    'Cleared': '<span class="badge badge-green">✅ Cleared</span>',
+  };
+  document.getElementById('eval-status-badge').innerHTML = statusMap[d.status] || d.status;
 
-        function openFrozenAccountsModal() {
-            loadFrozenAccounts();
-            frozenModal.show();
-        }
+  document.getElementById('eval-model-scores').textContent =
+    `XGB: ${(d.xgb_score||0).toFixed(3)} / GNN: ${(d.gnn_score||0).toFixed(3)} / IsoF: ${(d.iso_score||0).toFixed(3)}`;
 
-        async function loadFrozenAccounts() {
-            try {
-                const res = await fetch('/api/frozen-accounts');
-                if (!res.ok) return;
-                const data = await res.json();
-                const tbody = document.getElementById('frozen-accounts-table');
-                if (!tbody) return;
+  renderSHAPBars(d.shap_drivers || [], 'eval-shap-bars');
 
-                if (!data.accounts || data.accounts.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-shield-check text-success me-1"></i>No accounts currently frozen. All accounts operational.</td></tr>';
-                    return;
-                }
+  if (risk >= 0.5 || d.is_blocked) showToast({
+    AccountID: payload_cache?.AccountID || '?',
+    TransactionAmount: 0,
+    Location: '?',
+    RiskScore: risk,
+    IsBlocked: d.is_blocked,
+    Status: d.status,
+    SHAPDrivers: d.shap_drivers,
+    Timestamp: new Date().toISOString(),
+  });
+}
 
-                tbody.innerHTML = data.accounts.map(acc => `
-                    <tr>
-                        <td><span class="code-acc">${acc.account_id}</span></td>
-                        <td class="font-monospace small text-muted">${acc.frozen_at}</td>
-                        <td><span class="badge-pill badge-danger">${acc.reason || 'Manual Intervention'}</span></td>
-                        <td style="text-align: right;">
-                            <button class="btn btn-outline-success btn-sm py-1 px-2" style="font-size: 0.74rem;" onclick="toggleFreezeAccount('${acc.account_id}', false)">
-                                <i class="bi bi-unlock-fill me-1"></i> Unfreeze
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                console.warn('Failed to load frozen accounts:', e);
-            }
-        }
+let payload_cache = null;
+const _origEval = runEvaluator;
+window.runEvaluator = async () => {
+  payload_cache = {
+    AccountID: document.getElementById('eval-account').value,
+    TransactionAmount: document.getElementById('eval-amount').value,
+    Location: document.getElementById('eval-location').value,
+  };
+  await _origEval();
+};
 
-        // ── Concept Drift Check ───────────────────────────────────────────────
-        async function checkDriftStatus() {
-            try {
-                const res = await fetch('/api/drift/status');
-                if (!res.ok) return;
-                const data = await res.json();
-                const driftText = document.getElementById('drift-text');
-                if (driftText) {
-                    driftText.textContent = data.drift_detected ? `Drift (${data.drift_count})` : 'Stable';
-                    driftText.className = data.drift_detected ? 'text-danger font-monospace' : 'text-white font-monospace';
-                }
-            } catch (e) {
-                // Ignore drift fetch errors
-            }
-        }
+function resetEvaluator() {
+  document.getElementById('eval-result').style.display = 'none';
+}
 
-        // ── Transaction Analysis Form ─────────────────────────────────────────
-        function setupEventListeners() {
-            document.getElementById('transaction-form').addEventListener('submit', async function (e) {
-                e.preventDefault();
-                const now  = new Date().toISOString().replace('T',' ').substring(0,19);
-                const prev = new Date(Date.now() - 86400000).toISOString().replace('T',' ').substring(0,19);
-                const payload = {
-                    AccountID: document.getElementById('account-id').value || 'AC00128',
-                    TransactionAmount: parseFloat(document.getElementById('amount').value) || 100,
-                    TransactionType: document.getElementById('type').value,
-                    Channel: document.getElementById('channel').value,
-                    Location: document.getElementById('location').value || 'New York',
-                    TransactionDuration: Math.floor(Math.random() * 120) + 10,
-                    LoginAttempts: Math.floor(Math.random() * 3) + 1,
-                    AccountBalance: parseFloat((Math.random() * 10000).toFixed(2)),
-                    TransactionDate: now,
-                    PreviousTransactionDate: prev,
-                    DeviceID: 'D' + Math.floor(Math.random() * 1000).toString().padStart(3,'0'),
-                    MerchantID: 'M' + Math.floor(Math.random() * 100).toString().padStart(2,'0'),
-                    CustomerOccupation: ['Student','Doctor','Engineer','Retired'][Math.floor(Math.random()*4)]
-                };
+// ══════════════════════════════════════════════════════════
+// Graph (Vis-Network)
+// ══════════════════════════════════════════════════════════
+function loadGraph() {
+  fetch('/api/graph/data')
+    .then(r => r.json())
+    .then(d => {
+      graphData = d;
+      const stats = d.stats || {};
+      document.getElementById('graph-stats').textContent =
+        `Nodes: ${stats.total_nodes||0} · Edges: ${stats.total_edges||0}`;
+      renderGraph(d.nodes||[], d.edges||[]);
+    })
+    .catch(() => {});
+}
 
-                const resultDiv = document.getElementById('analysis-result');
-                resultDiv.innerHTML = '<div class="text-center mt-3"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Running cognitive multi-model evaluation...</p></div>';
+function renderGraph(nodes, edges) {
+  const container = document.getElementById('graph-canvas');
+  if (!container) return;
 
-                try {
-                    const res = await fetch('/api/analyze', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payload)
-                    });
-                    const data = await res.json();
-                    const score = data.composite_score || 0;
-                    const isBlocked = data.status === 'BLOCKED' || data.is_frozen;
-                    const riskLevel  = isBlocked ? 'BLOCKED (Account Frozen)' : score > 0.7 ? 'Critical Threat' : score > 0.4 ? 'Elevated Risk' : 'Normal / Safe';
-                    const alertClass = isBlocked ? 'border-danger' : score > 0.7 ? 'border-danger' : score > 0.4 ? 'border-warning' : 'border-success';
-                    const badgeColor = isBlocked ? 'badge-danger' : score > 0.7 ? 'badge-danger' : score > 0.4 ? 'badge-medium' : 'badge-safe';
+  const dataset = {
+    nodes: new vis.DataSet(nodes),
+    edges: new vis.DataSet(edges),
+  };
 
-                    let explanationHTML = `
-                        <div class="p-3 rounded mt-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle);">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-white">${riskLevel}</span>
-                                <span class="badge-pill ${badgeColor}">${score.toFixed(3)}</span>
-                            </div>
-                            <div class="row g-1 small text-muted font-monospace mb-2">
-                                <div class="col-6">XGBoost: ${(data.xgboost_probability||0).toFixed(3)}</div>
-                                <div class="col-6">GNN: ${(data.gnn_probability||0).toFixed(3)}</div>
-                                <div class="col-6">IsoForest: ${(data.isolation_forest_score||0).toFixed(3)}</div>
-                                <div class="col-6">Customer Risk: ${(data.customer_risk_score||0).toFixed(3)}</div>
-                            </div>
-                            <div class="small fw-bold text-secondary mb-1">Top SHAP Feature Importances:</div>
-                    `;
+  const options = {
+    physics: {
+      enabled: physicsEnabled,
+      barnesHut: { gravitationalConstant: -3000, springLength: 120, springConstant: 0.05 },
+      stabilization: { iterations: 200 }
+    },
+    interaction: { hover: true, tooltipDelay: 100, navigationButtons: false, keyboard: true },
+    nodes: {
+      borderWidth: 2,
+      shadow: { enabled: true, color: 'rgba(0,0,0,0.15)', size: 8, x: 2, y: 2 },
+    },
+    edges: { arrows: 'to', smooth: { type: 'dynamic' } },
+  };
 
-                    (data.explanation || []).forEach(f => {
-                        const w = Math.min(100, Math.abs(f.shap_value) * 200);
-                        const cls = f.shap_value > 0 ? 'impact-positive' : 'impact-negative';
-                        explanationHTML += `
-                            <div class="feature-impact">
-                                <span style="min-width:130px; display:inline-block;" class="text-truncate">${f.feature}</span>
-                                <div class="feature-bar ${cls}" style="width:${w}%; display:inline-block;"></div>
-                                <span class="font-monospace text-muted ms-auto">${f.shap_value.toFixed(3)}</span>
-                            </div>
-                        `;
-                    });
+  if (graphNetwork) graphNetwork.destroy();
+  graphNetwork = new vis.Network(container, dataset, options);
 
-                    explanationHTML += `</div>`;
-                    resultDiv.innerHTML = explanationHTML;
-                    updateNetworkGraph(payload.AccountID, payload.MerchantID, payload.DeviceID, payload.TransactionAmount);
-                    fetchAndRender();
-                } catch(err) {
-                    resultDiv.innerHTML = `<div class="alert alert-danger mt-3 py-2 small">Error: ${err.message}</div>`;
-                }
-            });
+  if (!nodes.length) {
+    container.innerHTML = `<div class="empty-state" style="padding-top:80px;"><div class="empty-state-icon">🕸️</div><div class="empty-state-msg">No graph data yet</div><div class="empty-state-sub">Stream transactions to build the entity graph</div></div>`;
+  }
+}
 
-            document.getElementById('refresh-btn').addEventListener('click', e => {
-                e.preventDefault();
-                fetchAndRender();
-            });
+function togglePhysics() {
+  physicsEnabled = !physicsEnabled;
+  if (graphNetwork) graphNetwork.setOptions({ physics: { enabled: physicsEnabled } });
+  document.getElementById('physics-btn').textContent = physicsEnabled ? '🧊 Freeze Physics' : '▶ Unfreeze Physics';
+}
 
-            document.getElementById('generate-report-btn').addEventListener('click', async e => {
-                e.preventDefault();
-                try {
-                    const txns = await (await fetch('/api/live-transactions?limit=20')).json();
-                    const reportData = {
-                        transactions: txns.filter(t => t.RiskScore > 0.5),
-                        customer_info: { name: 'Simulated Customer', account_id: 'SIMULATED', risk_score: 0.72 }
-                    };
-                    const blob = await (await fetch('/api/reports/sar', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(reportData)
-                    })).blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url;
-                    a.download = `SAR_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-                    document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
-                } catch(err) { alert('Report generation failed: ' + err.message); }
-            });
-        }
+function fitGraph() {
+  if (graphNetwork) graphNetwork.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+}
 
-        // ── Initialization ────────────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', () => {
-            initCharts();
-            initNetworkGraph();
-            setupEventListeners();
-            fetchAndRender();
-            setInterval(fetchAndRender, POLL_INTERVAL);
-            setInterval(checkDriftStatus, 10000);
-        });
-    </script>
+function searchGraph() {
+  const q = document.getElementById('graph-search').value.toLowerCase();
+  if (!graphNetwork || !q) return;
+  // Highlight matching nodes
+  const allNodes = graphData.nodes || [];
+  allNodes.forEach(n => {
+    const matches = n.label && n.label.toLowerCase().includes(q);
+    graphNetwork.body.data.nodes.update({ id: n.id, size: matches ? 28 : (n.size||16) });
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// Customer Profile
+// ══════════════════════════════════════════════════════════
+function lookupCustomer() {
+  const id = document.getElementById('customer-search').value.trim();
+  if (!id) return;
+  fetchProfile(id);
+}
+
+function quickLookup(id) {
+  document.getElementById('customer-search').value = id;
+  fetchProfile(id);
+}
+
+async function fetchProfile(customerId) {
+  try {
+    const r = await fetch(`/api/customer/${customerId}/profile`);
+    const d = await r.json();
+    renderProfile(d);
+  } catch(e) {
+    showNotification('Failed to load profile', 'error');
+  }
+}
+
+function renderProfile(d) {
+  document.getElementById('profile-empty').style.display = 'none';
+  document.getElementById('profile-result').style.display = 'block';
+  document.getElementById('profile-customer-id').textContent = `Customer: ${d.customer_id}`;
+
+  const tierColors = { LOW: 'badge-green', MEDIUM: 'badge-amber', HIGH: 'badge-red', CRITICAL: 'badge-red' };
+  document.getElementById('profile-risk-tier').className = `badge ${tierColors[d.risk_tier]||'badge-gray'}`;
+  document.getElementById('profile-risk-tier').textContent = d.risk_tier || 'LOW';
+
+  const metrics = [
+    ['Baseline Spend', `$${(d.baseline_spend||0).toLocaleString('en-US',{minimumFractionDigits:2})}`],
+    ['Amount Deviation Ratio', (d.amount_deviation_ratio||0).toFixed(4)],
+    ['Unique Locations (Geo-footprint)', d.unique_locations || 0],
+    ['Avg Transaction Duration', `${(d.avg_duration_seconds||0).toFixed(1)}s`],
+    ['Transaction Count', d.transaction_count || 0],
+    ['Recent Velocity (txn/min)', (d.recent_velocity_per_min||0).toFixed(3)],
+    ['Max Single Transaction', `$${(d.max_single_transaction||0).toLocaleString('en-US',{minimumFractionDigits:2})}`],
+    ['Last Updated', d.last_updated ? new Date(d.last_updated).toLocaleString() : '—'],
+  ];
+
+  document.getElementById('profile-metrics').innerHTML = metrics.map(([l,v]) =>
+    `<div class="profile-metric">
+      <span class="profile-metric-label">${l}</span>
+      <span class="profile-metric-value">${v}</span>
+    </div>`
+  ).join('');
+
+  // Anomaly bars
+  const anomalies = [
+    { feature: 'Amount Deviation', shap_value: Math.min(d.amount_deviation_ratio/5, 1), value: d.amount_deviation_ratio },
+    { feature: 'Velocity Score', shap_value: Math.min(d.recent_velocity_per_min/10, 1), value: d.recent_velocity_per_min },
+    { feature: 'Geo-footprint', shap_value: Math.min(d.unique_locations/10, 1), value: d.unique_locations },
+    { feature: 'Max Transaction', shap_value: Math.min(d.max_single_transaction/50000, 1), value: d.max_single_transaction },
+  ];
+  renderSHAPBars(anomalies, 'profile-anomaly-bars');
+}
+
+// ══════════════════════════════════════════════════════════
+// Freeze / Unfreeze
+// ══════════════════════════════════════════════════════════
+async function freezeAccount() {
+  const accountId = document.getElementById('freeze-account-id').value.trim();
+  const reason    = document.getElementById('freeze-reason').value;
+
+  if (!accountId) { showNotification('Enter an Account ID', 'error'); return; }
+
+  const r = await fetch('/api/accounts/freeze', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ account_id: accountId, reason })
+  });
+  const d = await r.json();
+  showNotification(d.message || 'Account frozen', 'success');
+  document.getElementById('freeze-account-id').value = '';
+  refreshFrozenList();
+  updateHeaderFrozenCount();
+}
+
+async function unfreezeAccount(accountId) {
+  const r = await fetch('/api/accounts/unfreeze', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ account_id: accountId })
+  });
+  const d = await r.json();
+  showNotification(d.message || 'Account unfrozen', 'success');
+  refreshFrozenList();
+  updateHeaderFrozenCount();
+  fetchTransactions();
+}
+
+async function refreshFrozenList() {
+  try {
+    const r  = await fetch('/api/accounts/frozen');
+    const d  = await r.json();
+    const accounts = d.accounts || [];
+    const total    = d.count || 0;
+
+    document.getElementById('frozen-total').textContent = total;
+    document.getElementById('frozen-blocked-txns').textContent =
+      allTransactions.filter(t => t.IsBlocked).length;
+
+    const tbody = document.getElementById('frozen-tbody');
+    if (!accounts.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-msg">No frozen accounts</div></div></td></tr>`;
+      return;
+    }
+
+    const now = Date.now();
+    tbody.innerHTML = accounts.map(a => {
+      const frozenAt  = new Date(a.frozen_at);
+      const diffMs    = now - frozenAt.getTime();
+      const diffMins  = Math.floor(diffMs / 60000);
+      const dur       = diffMins < 60 ? `${diffMins}m ago` : `${Math.floor(diffMins/60)}h ${diffMins%60}m ago`;
+      return `<tr>
+        <td><strong>${a.account_id}</strong></td>
+        <td><span class="text-sm">${frozenAt.toLocaleString()}</span></td>
+        <td><span class="text-sm text-secondary">${a.reason}</span></td>
+        <td><span class="badge badge-blue">${dur}</span></td>
+        <td><button class="btn btn-outline btn-sm" onclick="unfreezeAccount('${a.account_id}')">🔓 Unfreeze</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { /* silent */ }
+}
+
+// ══════════════════════════════════════════════════════════
+// SAR Report
+// ══════════════════════════════════════════════════════════
+async function generateSAR() {
+  showNotification('Generating SAR PDF...', 'info');
+  try {
+    const r = await fetch('/api/reports/sar', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        case_id:      document.getElementById('sar-case-id').value,
+        analyst_name: document.getElementById('sar-analyst').value,
+        notes:        document.getElementById('sar-notes').value,
+      })
+    });
+
+    if (!r.ok) { showNotification('SAR generation failed', 'error'); return; }
+    const blob = await r.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `FraudGuard_SAR_${new Date().toISOString().slice(0,10)}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('SAR PDF downloaded!', 'success');
+  } catch(e) {
+    showNotification('Error generating SAR: ' + e.message, 'error');
+  }
+}
+
+async function exportCSV() {
+  const r = await fetch('/api/export/csv');
+  if (!r.ok) { showNotification('No transactions to export', 'error'); return; }
+  const blob = await r.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `FraudGuard_Audit_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification('CSV exported!', 'success');
+}
+
+async function exportJSON() {
+  const r = await fetch('/api/export/json');
+  if (!r.ok) { showNotification('No transactions to export', 'error'); return; }
+  const blob = await r.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `FraudGuard_Audit_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification('JSON exported!', 'success');
+}
+
+// ══════════════════════════════════════════════════════════
+// ML Pipeline & Drift
+// ══════════════════════════════════════════════════════════
+async function fetchModelStatus() {
+  try {
+    const r = await fetch('/api/models/status');
+    const d = await r.json();
+
+    // Update cards
+    const modelMap = {
+      xgboost:          { dot: 'xgb-dot',   status: 'xgb-status' },
+      isolation_forest: { dot: 'iso-dot',   status: 'iso-status' },
+      gnn:              { dot: 'gnn-dot',   status: 'gnn-status', type: 'gnn-type' },
+      shap:             { dot: 'shap-dot',  status: 'shap-status' },
+    };
+
+    Object.entries(modelMap).forEach(([key, els]) => {
+      const m = d[key] || {};
+      const active = m.status === 'ACTIVE';
+      const dot = document.getElementById(els.dot);
+      const st  = document.getElementById(els.status);
+      if (dot) { dot.className = `model-status-dot ${active?'dot-active':'dot-inactive'}`; }
+      if (st)  { st.className = `badge ${active?'badge-green':'badge-gray'}`; st.textContent = m.status||'UNKNOWN'; }
+      if (els.type && m.type) { document.getElementById(els.type).textContent = m.type; }
+    });
+
+    // AutoML status
+    const automl = d.automl || {};
+    updateRetrainUI(automl);
+  } catch(e) { /* silent */ }
+}
+
+async function refreshDrift() {
+  try {
+    const r = await fetch('/api/drift/status');
+    const d = await r.json();
+    const reports = d.drift_reports || [];
+    const tbody   = document.getElementById('drift-tbody');
+
+    if (!reports.length || reports.every(r => r.severity === 'INSUFFICIENT_DATA')) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-msg">Insufficient data — stream more transactions</div></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = reports.map(r => {
+      const severityClass = {
+        NONE: 'drift-none', MILD: 'drift-mild', MODERATE: 'drift-moderate', SEVERE: 'drift-severe'
+      }[r.severity] || '';
+      const driftIcon = r.drift_detected ? '🔴' : '🟢';
+      return `<tr>
+        <td><strong>${r.feature}</strong></td>
+        <td>${(r.ks_statistic||0).toFixed(4)}</td>
+        <td>${(r.p_value||1).toFixed(6)}</td>
+        <td>${driftIcon} ${r.drift_detected ? 'YES' : 'NO'}</td>
+        <td><span class="${severityClass}">${r.severity}</span></td>
+        <td>${(r.reference_mean||0).toFixed(2)}</td>
+        <td>${(r.current_mean||0).toFixed(2)}</td>
+        <td>${(r.mean_shift_pct||0).toFixed(2)}%</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { /* silent */ }
+}
+
+let retrainPollInterval = null;
+
+async function triggerRetrain() {
+  const nSamples = parseInt(document.getElementById('retrain-samples').value) || 2000;
+  const nIter    = parseInt(document.getElementById('retrain-iter').value) || 15;
+
+  document.getElementById('retrain-btn').disabled = true;
+  document.getElementById('retrain-btn').innerHTML = '<span class="spinner"></span> Training...';
+  document.getElementById('retrain-msg').textContent = 'Initializing AutoML...';
+  document.getElementById('retrain-progress').style.width = '0%';
+  document.getElementById('retrain-result').style.display = 'none';
+
+  try {
+    await fetch('/api/models/retrain', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ n_samples: nSamples, n_iter: nIter })
+    });
+
+    // Poll for status
+    if (retrainPollInterval) clearInterval(retrainPollInterval);
+    retrainPollInterval = setInterval(async () => {
+      const r = await fetch('/api/models/status');
+      const d = await r.json();
+      const automl = d.automl || {};
+      updateRetrainUI(automl);
+      if (automl.status !== 'TRAINING') {
+        clearInterval(retrainPollInterval);
+        document.getElementById('retrain-btn').disabled = false;
+        document.getElementById('retrain-btn').innerHTML = '🚀 Trigger AutoML Retrain';
+      }
+    }, 2000);
+  } catch(e) {
+    showNotification('Retrain failed: ' + e.message, 'error');
+    document.getElementById('retrain-btn').disabled = false;
+    document.getElementById('retrain-btn').innerHTML = '🚀 Trigger AutoML Retrain';
+  }
+}
+
+function updateRetrainUI(automl) {
+  const pct = automl.progress_pct || 0;
+  document.getElementById('retrain-progress').style.width = `${pct}%`;
+  document.getElementById('retrain-msg').textContent = automl.message || `Status: ${automl.status||'IDLE'}`;
+
+  const result = automl.last_result;
+  if (result && result.success) {
+    const panel = document.getElementById('retrain-result');
+    panel.style.display = 'block';
+    const m = result.metrics || {};
+    document.getElementById('retrain-metrics-tbody').innerHTML = [
+      ['AUC-ROC', (m.auc_roc||0).toFixed(4)],
+      ['F1 Score', (m.f1_score||0).toFixed(4)],
+      ['Precision', (m.precision||0).toFixed(4)],
+      ['Recall', (m.recall||0).toFixed(4)],
+      ['Training Samples', result.training_samples||0],
+      ['Training Time', `${(result.training_time_seconds||0).toFixed(1)}s`],
+    ].map(([l,v]) => `<tr><td class="text-xs text-muted">${l}</td><td class="font-semibold text-sm">${v}</td></tr>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// Keyboard Shortcuts
+// ══════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+// Close modal when clicking overlay background
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// Bootstrap
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+
+  // Start polling
+  fetchStats();
+  fetchTransactions();
+  refreshInterval = setInterval(() => {
+    fetchStats();
+    fetchTransactions();
+    updateHeaderFrozenCount();
+  }, 2000);
+});
+</script>
 </body>
 </html>

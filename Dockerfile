@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────
-# FraudShield AI — Production Dockerfile
-# Build: docker build -t fraudshield .
+# FraudGuard AI — Production Dockerfile
+# Build: docker build -t fraudguard .
 # ─────────────────────────────────────────────────────────────
 
 # Use the official slim Python image to keep the image small

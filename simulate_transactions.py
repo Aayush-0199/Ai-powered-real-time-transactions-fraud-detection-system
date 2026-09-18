@@ -1,276 +1,468 @@
 """
-Real-Time Transaction Simulator
-================================
-Simulates live transaction streaming to the Fraud Detection Dashboard
-without requiring Kafka or Docker. Streams transactions directly via HTTP
-to the running Flask app at http://localhost:5000/api/analyze
-
-Calibration Rule:
-In each window of 10 transactions, between 2 and 5 transactions (at least 2, at most 5)
-are guaranteed to be risky/fraudulent with realistic anomaly signatures.
+simulate_transactions.py
+FraudGuard AI - Calibrated Live Transaction Streamer
+Batch-window calibration: 12 txns/batch, exactly 3 risky (25.0% fraud rate)
+5 fraud archetypes with realistic patterns
 """
 
-import requests
-import pandas as pd
-import random
 import time
+import random
+import requests
 import json
-import sys
-import os
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+from typing import Tuple
 
-# ANSI Color Codes
-RESET   = "\033[0m"
-BOLD    = "\033[1m"
-DIM     = "\033[2m"
-RED     = "\033[91m"
-GREEN   = "\033[92m"
-YELLOW  = "\033[93m"
-BLUE    = "\033[94m"
-MAGENTA = "\033[95m"
-CYAN    = "\033[96m"
-WHITE   = "\033[97m"
-BG_RED  = "\033[41m"
-BG_GREEN= "\033[42m"
-BG_BLUE = "\033[44m"
+try:
+    from colorama import Fore, Back, Style, init as colorama_init
+    colorama_init(autoreset=True)
+    COLORS_AVAILABLE = True
+except ImportError:
+    COLORS_AVAILABLE = False
 
-# Config
-FLASK_URL      = os.environ.get("FLASK_URL", "http://localhost:5000") + "/api/analyze"
-DATA_FILE      = "data/bank_transactions_data_2.csv"
-INTERVAL_SECS  = 1.2
-BATCH_SIZE     = 10   # Evaluate in calibrated windows of 10
-MIN_RISKY      = 2    # At least 2 risky per 10
-MAX_RISKY      = 5    # At most 5 risky per 10
+# ═══════════════════════════════════════════════════════════════════════════════
+# Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
 
-FRAUD_PATTERNS = [
-    {
-        "name": "High-Value Rapid Wire",
-        "overrides": {
-            "TransactionAmount": lambda: round(random.uniform(9500, 48000), 2),
-            "LoginAttempts": lambda: random.randint(4, 9),
-            "TransactionDuration": lambda: random.randint(2, 7),
-            "Channel": "Online",
-            "TransactionType": "Debit",
-        }
-    },
-    {
-        "name": "Suspicious Location Hop",
-        "overrides": {
-            "Location": lambda: random.choice(["Moscow", "Lagos", "Pyongyang", "Tehran"]),
-            "TransactionAmount": lambda: round(random.uniform(4500, 18000), 2),
-            "LoginAttempts": lambda: random.randint(3, 7),
-            "TransactionDuration": lambda: random.randint(5, 15),
-            "Channel": "Online",
-        }
-    },
-    {
-        "name": "Account Takeover / Balance Drain",
-        "overrides": {
-            "TransactionAmount": lambda: round(random.uniform(6000, 22000), 2),
-            "AccountBalance": lambda: round(random.uniform(25, 120), 2),
-            "LoginAttempts": lambda: random.randint(5, 10),
-            "TransactionDuration": lambda: random.randint(3, 9),
-            "Channel": "Online",
-        }
-    },
-    {
-        "name": "Automated Velocity Card Probing",
-        "overrides": {
-            "TransactionAmount": lambda: round(random.uniform(0.50, 2.99), 2),
-            "LoginAttempts": lambda: random.randint(5, 11),
-            "TransactionDuration": lambda: random.randint(1, 4),
-            "Channel": "Online",
-        }
-    },
-    {
-        "name": "Shared Device Collusion Ring",
-        "overrides": {
-            "DeviceID": lambda: random.choice(["DVC_SUSP_01", "DVC_SUSP_02", "DVC_COLLUDE_X"]),
-            "TransactionAmount": lambda: round(random.uniform(5500, 16000), 2),
-            "LoginAttempts": lambda: random.randint(4, 8),
-            "Channel": "Online",
-        }
-    }
+API_URL          = "http://localhost:5000/api/analyze"
+DELAY_SECONDS    = 1.2          # Interval between transactions
+BATCH_SIZE       = 12           # Transactions per window
+RISKY_PER_BATCH  = 3            # Exactly 3 risky per 12-txn batch = 25.0%
+CLEAN_PER_BATCH  = BATCH_SIZE - RISKY_PER_BATCH   # 9
+
+# ─── Pools ────────────────────────────────────────────────────────────────────
+ACCOUNT_IDS = [f"AC{i:05d}" for i in range(100, 200)]
+MERCHANT_IDS = [f"M{i:03d}" for i in range(100, 160)]
+DEVICE_IDS = [f"DVC_{i:04d}" for i in range(1000, 1060)]
+CLEAN_LOCATIONS = [
+    'New York', 'London', 'Singapore', 'Chicago', 'Los Angeles',
+    'Toronto', 'Sydney', 'Paris', 'Tokyo', 'Berlin', 'Amsterdam',
+    'Stockholm', 'Zurich', 'Seoul', 'Mumbai',
 ]
+RISKY_LOCATIONS = ['Moscow', 'Lagos', 'Pyongyang', 'Tehran', 'Caracas', 'Minsk', 'Tripoli']
+TXN_TYPES_CLEAN = ['Online Purchase', 'POS Debit', 'ATM Withdrawal', 'ACH Transfer', 'Bill Payment']
+TXN_TYPES_RISKY = ['Wire Transfer', 'International Wire', 'Online Debit', 'Card Not Present']
+CATEGORIES      = ['Electronics', 'Retail', 'Travel', 'Restaurant', 'Gas Station', 'Grocery']
 
+SUSPECT_DEVICE = "DVC_SUSP_01"   # Shared device collusion ring
+
+# ─── Running Stats ────────────────────────────────────────────────────────────
 stats = {
-    "total": 0,
-    "fraud": 0,
-    "normal": 0,
-    "errors": 0,
-    "injected_patterns": 0,
-    "batch_count": 0,
-    "start_time": datetime.now(),
+    'total':     0,
+    'flagged':   0,
+    'blocked':   0,
+    'cleared':   0,
+    'batches':   0,
+    'errors':    0,
+    'start_time': time.time(),
 }
 
 
-def print_banner():
-    os.system("cls" if os.name == "nt" else "clear")
-    print(f"""
-{BOLD}{CYAN}+==================================================================+
-|         F R A U D S H I E L D   A I   --   R I S K   S T R E A M        |
-|        Target: {FLASK_URL:<44}|
-|        Calibration: 2 to 5 Risky Transactions Per 10 Batch       |
-|        Press Ctrl+C to stop at any time.                        |
-+==================================================================+{RESET}
-""")
+# ═══════════════════════════════════════════════════════════════════════════════
+# Color Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def c(text: str, color: str) -> str:
+    if not COLORS_AVAILABLE:
+        return text
+    colors = {
+        'red':     Fore.RED,
+        'green':   Fore.GREEN,
+        'yellow':  Fore.YELLOW,
+        'cyan':    Fore.CYAN,
+        'magenta': Fore.MAGENTA,
+        'white':   Fore.WHITE,
+        'blue':    Fore.BLUE,
+        'bright':  Style.BRIGHT,
+        'dim':     Style.DIM,
+        'reset':   Style.RESET_ALL,
+    }
+    return colors.get(color, '') + str(text) + Style.RESET_ALL
 
 
-
-def print_stats():
-    elapsed = max((datetime.now() - stats["start_time"]).seconds, 1)
-    rate = stats["total"] / elapsed
-    fraud_pct = (stats["fraud"] / stats["total"] * 100) if stats["total"] > 0 else 0
-    print(f"\n{BOLD}{BLUE}{'='*82}{RESET}")
-    print(f"  {WHITE}Total Streamed: {stats['total']}{RESET}  "
-          f"{GREEN}Legit: {stats['normal']}{RESET}  "
-          f"{RED}Risky/Fraud: {stats['fraud']} ({fraud_pct:.1f}%){RESET}  "
-          f"{YELLOW}Batches Completed: {stats['batch_count']}{RESET}  "
-          f"{DIM}Rate: {rate:.2f} txn/s | Elapsed: {elapsed}s{RESET}")
-    print(f"{BOLD}{BLUE}{'='*82}{RESET}\n")
+def bold(text: str) -> str:
+    return c(text, 'bright')
 
 
-def build_payload(row, fraud_pattern=None, is_risky=False):
-    now = datetime.now()
-    prev = now - timedelta(days=random.randint(1, 28))
-    
-    if is_risky:
-        # Generate risky transaction signature
-        payload = {
-            "TransactionAmount": round(random.uniform(5500, 32000), 2),
-            "TransactionDuration": random.randint(2, 9),
-            "LoginAttempts": random.randint(4, 8),
-            "AccountBalance": round(random.uniform(100, 3500), 2),
-            "TransactionDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "PreviousTransactionDate": prev.strftime("%Y-%m-%d %H:%M:%S"),
-            "TransactionType": "Debit",
-            "Location": random.choice(["Moscow", "Lagos", "New York", "Chicago", "London"]),
-            "DeviceID": random.choice(["DVC_SUSP_01", "DVC_SUSP_02", "DVC9012"]),
-            "MerchantID": random.choice(["MRCH_HIGH_RISK", "MRCH8821", "MRCH4410"]),
-            "Channel": "Online",
-            "CustomerOccupation": random.choice(["Student", "Doctor", "Engineer", "Retired"]),
-            "AccountID": f"AC{random.randint(100, 999):05d}",
-            "IsSimulatedFraud": True
-        }
-        if fraud_pattern:
-            for key, val_fn in fraud_pattern["overrides"].items():
-                payload[key] = val_fn() if callable(val_fn) else val_fn
-    else:
-        # Generate clean legitimate transaction
-        payload = {
-            "TransactionAmount": float(row.get("TransactionAmount", random.uniform(15.0, 280.0))),
-            "TransactionDuration": max(35, int(row.get("TransactionDuration", random.randint(45, 180)))),
-            "LoginAttempts": 1,
-            "AccountBalance": float(row.get("AccountBalance", random.uniform(2500.0, 15000.0))),
-            "TransactionDate": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "PreviousTransactionDate": prev.strftime("%Y-%m-%d %H:%M:%S"),
-            "TransactionType": str(row.get("TransactionType", "Debit")),
-            "Location": str(row.get("Location", random.choice(["New York", "San Francisco", "Austin", "Boston"]))),
-            "DeviceID": str(row.get("DeviceID", f"DVC{random.randint(1000, 9999)}")),
-            "MerchantID": str(row.get("MerchantID", f"MRCH{random.randint(100, 899)}")),
-            "Channel": str(row.get("Channel", random.choice(["Online", "ATM", "Branch"]))),
-            "CustomerOccupation": str(row.get("CustomerOccupation", "Engineer")),
-            "AccountID": str(row.get("AccountID", f"AC{random.randint(100, 899):05d}")),
-            "IsSimulatedFraud": False
-        }
+# ═══════════════════════════════════════════════════════════════════════════════
+# Transaction Generators
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    return payload
+def make_clean_transaction() -> Tuple[dict, str]:
+    """Generate a legitimate, low-risk transaction (RiskScore < 0.20)."""
+    account = random.choice(ACCOUNT_IDS)
+    balance = round(random.uniform(5000, 80000), 2)
+    amount  = round(random.uniform(10, min(500, balance * 0.05)), 2)
+
+    txn = {
+        'AccountID':           account,
+        'CustomerID':          f"CUS{account[2:]}",
+        'TransactionAmount':   amount,
+        'AccountBalance':      balance,
+        'TransactionType':     random.choice(TXN_TYPES_CLEAN),
+        'MerchantID':          random.choice(MERCHANT_IDS),
+        'MerchantCategory':    random.choice(CATEGORIES),
+        'DeviceID':            random.choice(DEVICE_IDS),
+        'Location':            random.choice(CLEAN_LOCATIONS),
+        'LoginAttempts':       random.randint(1, 2),
+        'TransactionDuration': round(random.uniform(60, 300), 1),
+        'Timestamp':           datetime.now(timezone.utc).isoformat(),
+    }
+    return txn, 'CLEAN'
 
 
-def send_transaction(payload, fraud_pattern_name=None, slot_info=""):
-    stats["total"] += 1
-    txn_num = stats["total"]
+def make_fraud_wire_transfer() -> Tuple[dict, str]:
+    """Fraud Archetype 1: High-Value Rapid Wire Transfer ($9,500–$48,000)."""
+    account = random.choice(ACCOUNT_IDS)
+    balance = round(random.uniform(12000, 60000), 2)
+    amount  = round(random.uniform(9500, 48000), 2)
+
+    txn = {
+        'AccountID':           account,
+        'CustomerID':          f"CUS{account[2:]}",
+        'TransactionAmount':   amount,
+        'AccountBalance':      balance,
+        'TransactionType':     'Wire Transfer',
+        'MerchantID':          f"M{random.randint(900, 999)}",
+        'MerchantCategory':    'Financial Services',
+        'DeviceID':            random.choice(DEVICE_IDS),
+        'Location':            random.choice(CLEAN_LOCATIONS),
+        'LoginAttempts':       random.randint(4, 9),
+        'TransactionDuration': round(random.uniform(5, 25), 1),
+        'Timestamp':           datetime.now(timezone.utc).isoformat(),
+    }
+    return txn, 'WIRE FRAUD'
+
+
+def make_fraud_location_hop() -> Tuple[dict, str]:
+    """Fraud Archetype 2: Suspicious Location Hop to high-risk geo."""
+    account = random.choice(ACCOUNT_IDS)
+    balance = round(random.uniform(8000, 50000), 2)
+    amount  = round(random.uniform(500, 15000), 2)
+
+    txn = {
+        'AccountID':           account,
+        'CustomerID':          f"CUS{account[2:]}",
+        'TransactionAmount':   amount,
+        'AccountBalance':      balance,
+        'TransactionType':     random.choice(['International Wire', 'Wire Transfer']),
+        'MerchantID':          f"M{random.randint(800, 899)}",
+        'MerchantCategory':    'International Transfer',
+        'DeviceID':            random.choice(DEVICE_IDS),
+        'Location':            random.choice(RISKY_LOCATIONS),
+        'LoginAttempts':       random.randint(2, 6),
+        'TransactionDuration': round(random.uniform(10, 60), 1),
+        'Timestamp':           datetime.now(timezone.utc).isoformat(),
+    }
+    return txn, 'GEO HOP'
+
+
+def make_fraud_balance_drain() -> Tuple[dict, str]:
+    """Fraud Archetype 3: Account Takeover — Balance Drain (90%+ in one shot)."""
+    account = random.choice(ACCOUNT_IDS)
+    balance = round(random.uniform(10000, 90000), 2)
+    amount  = round(balance * random.uniform(0.90, 0.99), 2)  # 90-99% drain
+
+    txn = {
+        'AccountID':           account,
+        'CustomerID':          f"CUS{account[2:]}",
+        'TransactionAmount':   amount,
+        'AccountBalance':      balance,
+        'TransactionType':     'Online Debit',
+        'MerchantID':          f"M{random.randint(700, 799)}",
+        'MerchantCategory':    'Wire Transfer',
+        'DeviceID':            random.choice(DEVICE_IDS),
+        'Location':            random.choice(CLEAN_LOCATIONS + RISKY_LOCATIONS[:3]),
+        'LoginAttempts':       random.randint(5, 10),
+        'TransactionDuration': round(random.uniform(3, 15), 1),
+        'Timestamp':           datetime.now(timezone.utc).isoformat(),
+    }
+    return txn, 'BALANCE DRAIN'
+
+
+def make_fraud_card_probing() -> Tuple[dict, str]:
+    """Fraud Archetype 4: Automated Velocity Card Probing ($0.50–$2.99)."""
+    account = random.choice(ACCOUNT_IDS)
+    balance = round(random.uniform(500, 5000), 2)
+    amount  = round(random.uniform(0.50, 2.99), 2)
+
+    txn = {
+        'AccountID':           account,
+        'CustomerID':          f"CUS{account[2:]}",
+        'TransactionAmount':   amount,
+        'AccountBalance':      balance,
+        'TransactionType':     'Card Not Present',
+        'MerchantID':          f"M{random.randint(500, 599)}",
+        'MerchantCategory':    'Micro-Transaction',
+        'DeviceID':            random.choice(DEVICE_IDS),
+        'Location':            random.choice(CLEAN_LOCATIONS),
+        'LoginAttempts':       random.randint(6, 10),
+        'TransactionDuration': round(random.uniform(1, 8), 1),
+        'Timestamp':           datetime.now(timezone.utc).isoformat(),
+    }
+    return txn, 'CARD PROBE'
+
+
+def make_fraud_device_collusion() -> Tuple[dict, str]:
+    """Fraud Archetype 5: Shared Device Collusion Ring (DVC_SUSP_01)."""
+    account = random.choice(ACCOUNT_IDS)
+    balance = round(random.uniform(3000, 30000), 2)
+    amount  = round(random.uniform(1000, 20000), 2)
+
+    txn = {
+        'AccountID':           account,
+        'CustomerID':          f"CUS{account[2:]}",
+        'TransactionAmount':   amount,
+        'AccountBalance':      balance,
+        'TransactionType':     random.choice(['Wire Transfer', 'Online Debit', 'ACH Transfer']),
+        'MerchantID':          f"M{random.randint(600, 699)}",
+        'MerchantCategory':    'Financial Services',
+        'DeviceID':            SUSPECT_DEVICE,
+        'Location':            random.choice(CLEAN_LOCATIONS + RISKY_LOCATIONS[:2]),
+        'LoginAttempts':       random.randint(3, 8),
+        'TransactionDuration': round(random.uniform(5, 30), 1),
+        'Timestamp':           datetime.now(timezone.utc).isoformat(),
+    }
+    return txn, 'DEVICE COLLUSION'
+
+
+FRAUD_ARCHETYPES = [
+    make_fraud_wire_transfer,
+    make_fraud_location_hop,
+    make_fraud_balance_drain,
+    make_fraud_card_probing,
+    make_fraud_device_collusion,
+]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Batch Builder
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def build_batch() -> list:
+    """
+    Build one calibrated batch of 12 transactions:
+    - 9 clean (legitimate)
+    - 3 risky (one per fraud archetype, randomly sampled)
+    """
+    batch = []
+
+    # 9 clean transactions
+    for _ in range(CLEAN_PER_BATCH):
+        txn, label = make_clean_transaction()
+        batch.append((txn, label))
+
+    # 3 risky transactions — pick 3 distinct archetypes
+    chosen_archetypes = random.sample(FRAUD_ARCHETYPES, RISKY_PER_BATCH)
+    for archetype_fn in chosen_archetypes:
+        txn, label = archetype_fn()
+        batch.append((txn, label))
+
+    # Shuffle within batch to avoid ordering bias
+    random.shuffle(batch)
+    return batch
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# API Sender
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def send_transaction(txn: dict) -> dict:
+    """POST transaction to /api/analyze and return response dict."""
     try:
-        resp = requests.post(FLASK_URL, json=payload, timeout=10)
-        resp.raise_for_status()
-        result = resp.json()
-        fraud_score = result.get("composite_score", result.get("risk_score", 0))
-        is_fraud    = result.get("is_fraud", fraud_score > 0.5)
-        explanation = result.get("explanation", [])
-        top_feature = explanation[0].get("feature", "N/A") if explanation else "N/A"
-
-        if is_fraud:
-            stats["fraud"] += 1
-            flag = f"{BG_RED}{WHITE}{BOLD} RISKY/FRAUD {RESET}"
-            score_color = RED
-        else:
-            stats["normal"] += 1
-            flag = f"{BG_GREEN}{WHITE}{BOLD} LEGIT/CLEAR {RESET}"
-            score_color = GREEN
-
-        pattern_tag = f"  {MAGENTA}[{fraud_pattern_name}]{RESET}" if fraud_pattern_name else ""
-        slot_tag = f"{DIM}({slot_info}){RESET}" if slot_info else ""
-        print(
-            f"  {DIM}#{txn_num:>4}{RESET} {slot_tag:<8} {flag}  "
-            f"{WHITE}${payload['TransactionAmount']:>9.2f}{RESET}  "
-            f"Risk:{score_color}{BOLD}{fraud_score:.3f}{RESET}  "
-            f"{CYAN}{payload['AccountID']:<8}{RESET} "
-            f"{YELLOW}{payload['Location']:<14}{RESET} "
-            f"{DIM}top:{top_feature}{RESET}"
-            f"{pattern_tag}"
-        )
+        resp = requests.post(API_URL, json=txn, timeout=10)
+        return resp.json()
     except requests.exceptions.ConnectionError:
-        stats["errors"] += 1
-        print(f"  {RED}#{txn_num:>4}  ERROR: Cannot connect to {FLASK_URL} -- is the Flask app running?{RESET}")
+        return {'error': 'CONNECTION_REFUSED', 'status': 'ERROR'}
+    except requests.exceptions.Timeout:
+        return {'error': 'TIMEOUT', 'status': 'ERROR'}
     except Exception as e:
-        stats["errors"] += 1
-        print(f"  {RED}#{txn_num:>4}  ERROR: {e}{RESET}")
+        return {'error': str(e), 'status': 'ERROR'}
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Display Formatters
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def format_status_badge(result: dict, archetype_label: str) -> str:
+    """Format colored status badge from API result."""
+    if 'error' in result:
+        return c(f"[ERROR: {result['error']}]", 'red')
+
+    status    = result.get('status', 'Unknown')
+    risk      = float(result.get('risk_score', 0))
+    is_blocked = result.get('is_blocked', False)
+    is_fraud  = result.get('is_fraud', False)
+
+    if is_blocked:
+        return c('🔒 BLOCKED', 'red') + c(f" ({risk:.3f})", 'yellow')
+    elif is_fraud or risk >= 0.7:
+        color = 'red' if risk >= 0.7 else 'yellow'
+        return c(f'🚨 FLAGGED [{status}]', color) + c(f" ({risk:.3f})", 'yellow')
+    elif risk >= 0.5:
+        return c(f'⚠️  HIGH RISK', 'yellow') + c(f" ({risk:.3f})", 'yellow')
+    else:
+        return c(f'✅ Cleared', 'green') + c(f" ({risk:.3f})", 'dim')
+
+
+def print_transaction(slot: int, total_in_batch: int, txn: dict, archetype_label: str, result: dict):
+    """Print a formatted transaction row to terminal."""
+    slot_tag   = c(f"({slot}/{total_in_batch})", 'dim')
+    txn_id     = result.get('transaction_id', txn.get('TransactionID', '?'))
+    account_id = txn.get('AccountID', '?')
+    amount     = float(txn.get('TransactionAmount', 0))
+    location   = txn.get('Location', '?')
+    txn_type   = txn.get('TransactionType', '?')[:16]
+    risk       = float(result.get('risk_score', 0))
+    status_str = format_status_badge(result, archetype_label)
+
+    # Archetype tag
+    if archetype_label == 'CLEAN':
+        arch_tag = c('[LEGIT]', 'dim')
+    else:
+        arch_tag = c(f'[{archetype_label}]', 'magenta')
+
+    amount_str = c(f"${amount:>10,.2f}", 'cyan' if amount > 1000 else 'white')
+
+    print(
+        f"  {slot_tag} {c(txn_id, 'blue')} │ "
+        f"{c(account_id, 'white')} │ "
+        f"{amount_str} │ "
+        f"{c(location[:14],'yellow'):16} │ "
+        f"{txn_type[:16]:18} │ "
+        f"{status_str} {arch_tag}"
+    )
+
+
+def print_batch_header(batch_num: int):
+    line = "─" * 115
+    print(f"\n  {c(line, 'dim')}")
+    print(
+        f"  {bold('BATCH')} {c(f'#{batch_num:04d}', 'cyan')}  │  "
+        f"{c(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC'), 'dim')}  │  "
+        f"Window: {BATCH_SIZE} txns  │  Target fraud rate: "
+        f"{c(f'{(RISKY_PER_BATCH/BATCH_SIZE)*100:.1f}%', 'yellow')}"
+    )
+    print(f"  {c(line, 'dim')}")
+    print(
+        f"  {'Slot':6} {'TxnID':12} │ {'Account':8} │ {'Amount':>12} │ "
+        f"{'Location':16} │ {'Type':18} │ Status"
+    )
+    print(f"  {c(line, 'dim')}")
+
+
+def print_batch_summary(batch_results: list):
+    """Print running stats after each batch."""
+    flagged = sum(1 for _, r in batch_results if r.get('is_fraud'))
+    cleared = sum(1 for _, r in batch_results if r.get('status') == 'Cleared')
+    avg_risk = sum(float(r.get('risk_score', 0)) for _, r in batch_results) / max(len(batch_results), 1)
+    actual_rate = (flagged / max(len(batch_results), 1)) * 100.0
+
+    # Update global stats
+    stats['total']   += len(batch_results)
+    stats['flagged'] += flagged
+    stats['cleared'] += cleared
+    stats['batches'] += 1
+    stats['blocked'] += sum(1 for _, r in batch_results if r.get('is_blocked'))
+
+    elapsed = time.time() - stats['start_time']
+    elapsed_str = f"{int(elapsed//60)}m{int(elapsed%60)}s"
+
+    print(f"\n  {'─'*115}")
+    summary = (
+        f"  📊 Batch Summary │ "
+        f"Flagged: {c(str(flagged), 'red')}/{BATCH_SIZE} │ "
+        f"Rate: {c(f'{actual_rate:.1f}%', 'yellow')} │ "
+        f"Avg Risk: {c(f'{avg_risk:.3f}', 'cyan')} │ "
+        f"Total Scanned: {c(str(stats['total']), 'white')} │ "
+        f"Uptime: {c(elapsed_str, 'dim')}"
+    )
+    print(summary)
+    print(
+        f"  🌐 Cumulative    │ "
+        f"Total Flagged: {c(str(stats['flagged']), 'red')} │ "
+        f"Cleared: {c(str(stats['cleared']), 'green')} │ "
+        f"Blocked: {c(str(stats['blocked']), 'magenta')} │ "
+        f"Batches Run: {c(str(stats['batches']), 'cyan')}"
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Wait for Server
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def wait_for_server(max_retries: int = 30, retry_interval: float = 2.0) -> bool:
+    """Poll /api/health until server is ready."""
+    health_url = "http://localhost:5000/api/health"
+    print(f"\n  {c('⏳ Waiting for FraudGuard AI server...', 'yellow')}")
+    for attempt in range(1, max_retries + 1):
+        try:
+            resp = requests.get(health_url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                print(f"  {c('✅ Server ready!', 'green')} (models_loaded: {data.get('models_loaded', '?')})")
+                return True
+        except Exception:
+            pass
+        print(f"  {c(f'  Attempt {attempt}/{max_retries}...', 'dim')}", end='\r')
+        time.sleep(retry_interval)
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main Loop
+# ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    print_banner()
-    if not os.path.exists(DATA_FILE):
-        print(f"{RED}ERROR: Cannot find {DATA_FILE}. Run from the project root.{RESET}")
-        sys.exit(1)
+    # ── Startup Banner ────────────────────────────────────────────────────────
+    print("\n" + "="*80)
+    print(bold("  🛡️  FraudGuard AI — Live Transaction Simulator"))
+    print(f"  Calibration: {BATCH_SIZE} txns/batch │ {RISKY_PER_BATCH} risky │ {CLEAN_PER_BATCH} clean │ {DELAY_SECONDS}s delay")
+    print(f"  5 Fraud archetypes: Wire Fraud, Geo Hop, Balance Drain, Card Probe, Device Collusion")
+    print("="*80)
 
-    df = pd.read_csv(DATA_FILE).dropna(subset=["TransactionAmount", "AccountID"])
-    total_rows = len(df)
-    print(f"  {GREEN}Loaded {total_rows} base transaction profiles.{RESET}")
-    print(f"  {CYAN}Streaming calibrated at {1/INTERVAL_SECS:.1f} txn/s with 2 to 5 risky transactions per 10-batch.{RESET}\n")
-    print(f"{BOLD}{BLUE}{'─'*84}{RESET}")
-    print(f"  {DIM}{'#':>4}  {'SLOT':<6} {'STATUS':<13} {'AMOUNT':>10}  {'RISK':>7}  {'ACCOUNT':<8} {'LOCATION':<14} TOP INDICATOR{RESET}")
-    print(f"{BOLD}{BLUE}{'─'*84}{RESET}")
+    # ── Wait for server ────────────────────────────────────────────────────────
+    if not wait_for_server():
+        print(c("\n  ❌ Could not connect to FraudGuard AI server.", 'red'))
+        print(c("  → Start the server first: python app.py", 'yellow'))
+        return
 
-    idx = 0
+    print(f"\n  {c('▶ Streaming transactions...', 'green')} Press Ctrl+C to stop.\n")
     batch_num = 0
 
     try:
         while True:
-            # ── Form a new batch of 10 transactions ───────────────────────
             batch_num += 1
-            stats["batch_count"] = batch_num
-            # Calibrate: choose between 2 and 5 risky transactions in this batch
-            num_risky = random.randint(MIN_RISKY, MAX_RISKY)
-            risky_positions = set(random.sample(range(BATCH_SIZE), num_risky))
+            batch = build_batch()
+            print_batch_header(batch_num)
 
-            print(f"\n  {BOLD}{BG_BLUE}{WHITE} BATCH #{batch_num} -- Calibrated: {num_risky} of 10 Transactions Scheduled as Risky ({num_risky*10}%) {RESET}")
+            batch_results = []
+            for slot, (txn, archetype_label) in enumerate(batch, start=1):
+                result = send_transaction(txn)
 
-            for slot in range(BATCH_SIZE):
-                row = df.iloc[idx % total_rows].to_dict()
-                idx += 1
-                
-                is_risky_slot = (slot in risky_positions)
-                fraud_pattern = None
+                if 'error' in result and result['error'] == 'CONNECTION_REFUSED':
+                    print(c(f"\n  ❌ Server connection lost. Retrying...", 'red'))
+                    if not wait_for_server(max_retries=15, retry_interval=2.0):
+                        print(c("  Server not responding. Exiting.", 'red'))
+                        return
 
-                if is_risky_slot:
-                    fraud_pattern = random.choice(FRAUD_PATTERNS)
-                    stats["injected_patterns"] += 1
+                print_transaction(slot, BATCH_SIZE, txn, archetype_label, result)
+                batch_results.append((txn, result))
+                time.sleep(DELAY_SECONDS)
 
-                payload = build_payload(row, fraud_pattern, is_risky=is_risky_slot)
-                slot_label = f"{slot+1}/10"
-                send_transaction(payload, fraud_pattern["name"] if fraud_pattern else None, slot_info=slot_label)
-
-                time.sleep(INTERVAL_SECS)
-
-            # Print cumulative statistics at the end of each 10-batch
-            print_stats()
+            print_batch_summary(batch_results)
+            time.sleep(0.5)   # Brief pause between batches
 
     except KeyboardInterrupt:
-        print(f"\n\n{BOLD}{YELLOW}Simulation paused by user.{RESET}")
-        print_stats()
-        elapsed = (datetime.now() - stats["start_time"]).seconds
-        print(f"  {CYAN}Check real-time graphs and alerts at http://localhost:5000{RESET}\n")
+        elapsed = time.time() - stats['start_time']
+        print(f"\n\n  {c('⏹  Simulation stopped by user.', 'yellow')}")
+        print(f"  Total transactions sent: {c(str(stats['total']), 'cyan')}")
+        print(f"  Total flagged:           {c(str(stats['flagged']), 'red')}")
+        print(f"  Total cleared:           {c(str(stats['cleared']), 'green')}")
+        print(f"  Total runtime:           {c(f'{int(elapsed//60)}m {int(elapsed%60)}s', 'dim')}")
+        fraud_rate = (stats['flagged'] / max(stats['total'], 1)) * 100
+        print(f"  Overall fraud rate:      {c(f'{fraud_rate:.1f}%', 'yellow')}")
+        print()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
