@@ -1,53 +1,19 @@
 # FraudGuard AI — Render Deployment Configuration
+# Single free-tier web service that runs Flask + simulator together.
 # https://render.com/docs/blueprint-spec
-# Deploy from GitHub → Render will read this file and auto-create both services.
 
 services:
-  # ──────────────────────────────────────────────────────────────────────────
-  # 1. Web Service — Flask API + Dashboard
-  # ──────────────────────────────────────────────────────────────────────────
   - type: web
     name: fraudguard-api
-    runtime: docker
-    dockerfilePath: ./Dockerfile
-    plan: free             # Free tier on Render (512MB RAM)
-    region: oregon         # Choose nearest region (oregon / singapore / frankfurt)
-    branch: main
-
-    # Health check: Render will ping this every 30s to confirm the service is alive
-    healthCheckPath: /
-
-    # Disk persistence (needed so customer_profiles.json survives restarts)
-    disk:
-      name: fraudguard-data
-      mountPath: /app/data
-      sizeGB: 1             # 1GB free-tier disk
-
-    envVars:
-      - key: FLASK_ENV
-        value: production
-      - key: PYTHONUNBUFFERED
-        value: "1"
-      # Render automatically sets PORT; Flask binds on 5000 via Dockerfile CMD
-
-  # ──────────────────────────────────────────────────────────────────────────
-  # 2. Background Worker — Live Transaction Simulator
-  # ──────────────────────────────────────────────────────────────────────────
-  - type: worker
-    name: fraudguard-simulator
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
     region: oregon
     branch: main
-
-    # Override the Dockerfile CMD to run the simulator instead of Flask
-    dockerCommand: python simulate_transactions.py
+    healthCheckPath: /
 
     envVars:
-      - key: FLASK_URL
-        # This MUST be updated to your actual deployed web service URL after first deploy
-        # e.g.: https://fraudguard-api.onrender.com
-        value: https://fraudguard-api.onrender.com
+      - key: FLASK_ENV
+        value: production
       - key: PYTHONUNBUFFERED
         value: "1"

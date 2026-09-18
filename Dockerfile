@@ -31,7 +31,7 @@ RUN pip install --no-cache-dir \
 
 # ── Step 3: Install the rest of the application dependencies ──
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+RUN pip install --no-cache-dir -r requirements.txt gunicorn gevent
 
 # ── Step 4: Copy the full application source ──
 COPY . .
@@ -39,6 +39,9 @@ COPY . .
 # Render injects PORT env var; expose it
 EXPOSE 5000
 
+# Make the startup script executable
+RUN chmod +x start.sh
+
 # ── Production start command ──
-# gunicorn with 1 worker (models are heavy; 1 worker per dyno to save RAM)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "120", "--access-logfile", "-", "app:app"]
+# start.sh launches gunicorn (threaded) + the simulator together
+CMD ["/bin/bash", "start.sh"]
