@@ -1,4 +1,7 @@
-# FraudGuard AI - Core Production Dependencies
+# FraudGuard AI — Production Dependencies
+
+# Production WSGI Server (required for Render deployment)
+gunicorn>=21.2.0
 
 # Web & API Framework
 Flask>=3.0.0
@@ -16,8 +19,8 @@ scikit-learn>=1.3.0
 xgboost>=2.0.0
 joblib>=1.3.0
 
-# Deep Learning & Graph Networks
-torch>=2.0.0
-
 # Model Explainability
 shap>=0.43.0
+
+# Note: torch and torch_geometric are installed separately in Dockerfile
+# using the CPU-only wheels to keep image size manageable.

@@ -5,3 +5,7 @@ __pycache__/
 mlruns/
 .env
 .DS_Store
+reports/
+*.log
+app_log.txt
+sim_log.txt

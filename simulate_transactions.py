@@ -35,7 +35,7 @@ BG_GREEN= "\033[42m"
 BG_BLUE = "\033[44m"
 
 # Config
-FLASK_URL      = "http://localhost:5000/api/analyze"
+FLASK_URL      = os.environ.get("FLASK_URL", "http://localhost:5000") + "/api/analyze"
 DATA_FILE      = "data/bank_transactions_data_2.csv"
 INTERVAL_SECS  = 1.2
 BATCH_SIZE     = 10   # Evaluate in calibrated windows of 10
