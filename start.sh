@@ -1,6 +1,6 @@
 #!/bin/bash
 # ──────────────────────────────────────────────────────────────
-# FraudGuard AI — Production Startup Script
+# FraudShield AI — Production Startup Script
 # Runs the Flask API (via gunicorn) + transaction simulator
 # together inside a single Render free-tier web service.
 # ──────────────────────────────────────────────────────────────

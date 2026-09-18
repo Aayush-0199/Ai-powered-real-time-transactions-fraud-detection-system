@@ -108,12 +108,13 @@ def print_banner():
     os.system("cls" if os.name == "nt" else "clear")
     print(f"""
 {BOLD}{CYAN}+==================================================================+
-|     AI-POWERED FRAUD DETECTION -- REAL-TIME RISK STREAM          |
-|        Target: http://localhost:5000                             |
+|         F R A U D S H I E L D   A I   --   R I S K   S T R E A M        |
+|        Target: {FLASK_URL:<44}|
 |        Calibration: 2 to 5 Risky Transactions Per 10 Batch       |
 |        Press Ctrl+C to stop at any time.                        |
 +==================================================================+{RESET}
 """)
+
 
 
 def print_stats():
