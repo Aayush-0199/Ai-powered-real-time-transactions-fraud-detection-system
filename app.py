@@ -31,10 +31,14 @@ profiler = CustomerRiskProfiler()
 drift_detector = ConceptDriftDetector()
 
 # ── Live Transaction Store ──────────────────────────────────────────────────
-# Thread-safe ring buffer keeping the last 1000 analyzed transactions
+# Thread-safe ring buffer — always accepts new transactions.
+# Uses a monotonic _txn_counter as each record's unique 'id' so the
+# frontend can poll with ?since=<last_id> and ONLY get genuinely new rows.
+# The deque auto-evicts the oldest entry when full — it never stops accepting.
+BUFFER_MAXLEN = 1000
 _store_lock = threading.Lock()
-live_transactions = deque(maxlen=1000)
-_txn_counter = 0  # global sequential ID
+live_transactions = deque(maxlen=BUFFER_MAXLEN)
+_txn_counter = 0  # monotonically increasing; never resets during a session
 
 # ── Frozen Accounts Store ──────────────────────────────────────────────────
 _frozen_lock = threading.Lock()
@@ -309,11 +313,30 @@ def get_recent_transactions():
 
 @app.route('/api/live-transactions')
 def get_live_transactions():
-    """Return the most recent N transactions from the live in-memory store."""
-    limit = int(request.args.get('limit', 50))
+    """Return transactions newer than ?since=<id> (default: last 50).
+
+    The 'since' cursor pattern ensures the frontend always gets genuinely
+    new records even after the ring buffer wraps past 1000 entries.
+    When 'since' is omitted, returns the most recent 'limit' records.
+    """
+    limit = min(int(request.args.get('limit', 50)), BUFFER_MAXLEN)
+    since = request.args.get('since')  # last seen transaction id
+
     with _store_lock:
-        # Return newest first
-        rows = list(live_transactions)[-limit:][::-1]
+        all_txns = list(live_transactions)  # oldest → newest
+
+    if since is not None:
+        try:
+            since_id = int(since)
+            # Keep only rows whose id is strictly greater than since_id
+            new_rows = [t for t in all_txns if t['id'] > since_id]
+            # Return newest first, capped at limit
+            rows = new_rows[-limit:][::-1]
+        except (ValueError, TypeError):
+            rows = all_txns[-limit:][::-1]
+    else:
+        rows = all_txns[-limit:][::-1]
+
     return jsonify(rows)
 
 @app.route('/api/stats')
@@ -345,16 +368,17 @@ def get_stats():
 
 @app.route('/api/reset', methods=['POST', 'GET'])
 def reset_live_store():
-    """Reset the live transaction ring buffer and counter."""
-    global _txn_counter
+    """Clear the ring buffer display without resetting the counter.
+    The _txn_counter is intentionally NOT reset so the since-cursor
+    on the frontend never gets confused by duplicate IDs.
+    """
     with _store_lock:
         live_transactions.clear()
-        _txn_counter = 0
     return jsonify({
         'status': 'success',
-        'message': 'Live transaction ring buffer reset successfully. Limit set to 1000.',
-        'buffer_size': len(live_transactions),
-        'maxlen': live_transactions.maxlen
+        'message': f'Ring buffer cleared. Counter continues from {_txn_counter}.',
+        'buffer_size': 0,
+        'maxlen': BUFFER_MAXLEN
     })
 
 # ── Incident Response: Account Freeze & Block Endpoints ─────────────────────

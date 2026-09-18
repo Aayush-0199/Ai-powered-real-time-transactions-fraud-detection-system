@@ -1271,8 +1271,11 @@
         // ── Main Polling Routine ──────────────────────────────────────────────
         async function fetchAndRender() {
             try {
+                // Pass ?since=lastSeenId so the server returns ONLY new rows,
+                // not the same 50 newest items every poll (fixes buffer-full freeze).
+                const sinceParam = isInitialLoad ? '' : `&since=${lastSeenId}`;
                 const [txnRes, statsRes] = await Promise.all([
-                    fetch('/api/live-transactions?limit=50'),
+                    fetch(`/api/live-transactions?limit=50${sinceParam}`),
                     fetch('/api/stats')
                 ]);
                 if (!txnRes.ok || !statsRes.ok) return;
